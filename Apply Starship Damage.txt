@@ -1,0 +1,106 @@
+!scriptcard {{ 
+--#title|Gunnery Phase Damage Application
+--#emoteState|Hidden
+
+--=i|1
+--~|array;define;WeaponArcs;Forward;Aft;Port;Starboard
+--~SelectedTokens|array;selectedtokens;DamagedTokens
+
+--:BeginDamageApplication|
+	--~CurrentToken|array;getfirst;DamagedTokens
+	--?[&CurrentToken] -inc Error|>ArrayError;Tokens
+	--#sourceToken|[&CurrentToken]
+	
+	--:InitialConditions|
+		--=CurrentHP|[*S:hp]
+		--=CurrentForwardShields|[*S:forward_shields]
+		--=CurrentAftShields|[*S:aft_shields]
+		--=CurrentPortShields|[*S:port_shields]
+		--=CurrentStarboardShields|[*S:starboard_shields]
+	--:StartDamageLoop|
+	--~CurrentArc|array;getfirst;WeaponArcs
+	--?[&CurrentArc] -inc Error|>ArrayError;Arcs
+		--:StartArcLoop|
+			--&Arc|[&CurrentArc]
+			--?[*S:damage[$i.Total]_to_[&Arc]] -lt 1 -or [*S:damage[$i.Total]_to_[&Arc]] -eq undefined|NoDamageThisArc
+			--=DamageValue|[*S:damage[$i.Total]_to_[&Arc]]
+			--=HullDamage|[$DamageValue] - [$Current[&Arc]Shields]
+			--?[$HullDamage] -lt 0|=HullDamage;0
+			--=ShieldDamage|[$DamageValue] - [$HullDamage]
+			--?[$HullDamage] -le 0|NoHullDamage
+			--?[$HullDamage] -lt [*S:damage_threshold]|NoHullDamage
+			--@modbattr|_charid [*S:character_id] _hp|-[$HullDamage] _silent
+			--?[*S:npcship_toggle] -eq pc|&HullDamageOutput;[*S:character_name] takes [b][$HullDamage] hull damage[/b]. [br][br]
+			--?[*S:damage[$i.Total]_to_[&Arc]_crit] -eq Yes|>CriticalEffect;No
+		-->CriticalThreshold|
+		--:NoHullDamage|
+			--@modbattr|_charid [*S:character_id] _[&Arc]_shields|-[$ShieldDamage] _silent
+			--?[*S:npcship_toggle] -eq pc|&ShieldDamageOutput;[*S:character_name] takes [b][$ShieldDamage] shield damage[/b] in the [&Arc] arc. [br][br]
+			--=Current[&Arc]Shields|[$Current[&Arc]Shields] - [$ShieldDamage]
+			--@setattr|_charid [*S:character_id] _damage[$i.Total]_to_[&Arc]|0 _damage[$i.Total]_to_[&Arc]_crit|No _silent
+		--:NoDamageThisArc|
+			--~CurrentArc|array;getnext;WeaponArcs
+			--?[&CurrentArc] -inc Error|ArcsForDamageNumberComplete
+			--^StartArcLoop|
+		--:ArcsForDamageNumberComplete|
+			--=i|[$i] + 1
+			--?[*S:damage[$i.Total]_to_forward] -eq undefined -and [*S:damage[$i.Total]_to_aft] -eq undefined -and [*S:damage[$i.Total]_to_port] -eq undefined -and [*S:damage[$i.Total]_to_starboard] -eq undefined|CurrentTokenComplete
+			--?[*S:damage[$i.Total]_to_forward] -lt 1 -and [*S:damage[$i.Total]_to_aft] -lt 1 -and [*S:damage[$i.Total]_to_port] -lt 1 -and [*S:damage[$i.Total]_to_starboard] -lt 1|CurrentTokenComplete
+			--^StartDamageLoop|
+		--:CurrentTokenComplete|
+			--~CurrentToken|array;getnext;DamagedTokens
+			--?[&CurrentToken] -inc Error|DamageAssignmentComplete
+			--?[&CurrentToken] -eq ArrayError|DamageAssignmentComplete
+			--#sourceToken|[&CurrentToken]
+			--?"[*S:character_name]" -eq Missile|CurrentTokenComplete
+			--^StartDamageLoop|
+
+		--:CriticalEffect|
+			--=CriticalDamageEffect|[T#CriticalDamageEffect]
+			--~SystemAffected|string;replace; ;_;[$CriticalDamageEffect.tableEntryText]
+			--?[*S:target_lockon] -eq Yes|&SystemAffected;[*S:target_lockon_system]
+			--?[&SystemAffected] -eq Weapons|&SystemAffected;[&Arc]_[&SystemAffected]
+			--?[&SystemAffected] -eq Power_Core|PowerCoreCrit
+			--C[*S:[&SystemAffected]_status]|+0:>StatusModifier;-2|-2:>StatusModifier;-4
+			--?[*S:[&SystemAffected]_status] -eq -4|&StatusModifier;+1d0cf1[wrecked]
+			--@setattr|_charid [*S:character_id] _[&SystemAffected]_status|[&StatusModifier] _silent
+			--?[*S:npcship_toggle] -eq pc|&CriticalDamageOutput;[*S:character_name] takes critical damage to the [b][$CriticalDamageEffect.tableEntryText] system[/b]. [br][br]
+			--:CritDone|
+			--<|
+			
+			--:PowerCoreCrit|							
+				--C[*S:power_core_status]|+0:>StatusModifier;undefined|undefined:>StatusModifier;-2|-2:>StatusModifier;-4
+				--?[*S:[power_core_status] -eq -4|&StatusModifier;+1d0cf1[wrecked]
+				--@setattr|_charid [*S:character_id] _power_core_status|[&StatusModifier]
+				--?[*S:npcship_toggle] -eq pc|&CriticalDamageOutput;[*S:character_name] takes critical damage to the [b]Power Core system[/b]. [br][br]
+				--^CritDone|
+				
+			--:StatusModifier|
+				--&StatusModifier|[%1%]
+				--<|
+
+		--:CriticalThreshold|
+			--=j|0
+			--=AfterDamageHullPoints|[$CurrentHP] - [$HullDamage]
+			--:CriticalThresholdLoop|
+				--=j|[$j] + 1
+				--=CriticalThreshold[$j.Total]|[$j] * [*S:critical_threshold] - [*S:hp^] {ABS}
+				--?[$CurrentHP] -gt [$CriticalThreshold[$j.Total]] -and [$AfterDamageHullPoints] -le [$CriticalThreshold[$j.Total]]|>CriticalEffect
+				--?[$j] -lt 5|CriticalThresholdLoop
+				--=CurrentHP|[$AfterDamageHullPoints]
+				--<|		
+				
+--:ArrayError|
+	--+Error|There has been an error in the [%1%] array.
+	--X|
+	
+--:DamageAssignmentComplete|
+--*Damage Assignment Complete!|
+--+|[c][b]Ship Damaged![/b][/c]
+--+|[c][&ShieldDamageOutput][/c]
+--+|[c][&HullDamageOutput][/c]
+--+|[c][&CriticalDamageOutput][/c]
+--@setattr|_charid [*S:character_id] _taunt_on|No _taunt_phase|None _taunt_duration|None _engine_divert|No _science_divert|No _weapon_divert|No _target_lockon|No _target_lockon_system|None _computer_nodes_used|0 _hard_turn_failure|No _panel_access_failure|No _panel_access_success|No _realignment_failure|No _eldritch_shot|None _silent
+--X|
+}}
+

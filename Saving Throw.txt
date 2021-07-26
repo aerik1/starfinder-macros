@@ -1,0 +1,32 @@
+!scriptcard {{
++++Starfinder+++
+--#whisper|self
+--#emoteState|hidden
+  --#sourceToken|@{selected|token_id}
+--Lsettings|[*S:character_name]
+--?[*S:sheet_type] -eq npc|>NPCSettings
+--#title|[*S:t-name] Saving Throw
+--#leftsub|Which save?
+
+--:Output|
+--+|[c][rbutton]Fortitude::SavingThrow;Fortitude[/rbutton] [rbutton]Reflex::SavingThrow;Reflex[/rbutton] [rbutton]Will::SavingThrow;Will[/rbutton][/c]
+--X|
+
+--:NPCSettings|
+--Lsettings|npcsettings
+--#whisper|GM
+--<|
+
+  --&SaveType|[&reentryval]
+  --#title|[*S:t-name] - [&SaveType] Saving Throw
+  --#leftsub|
+  --#whisper|
+  --C[&SaveType]|Fortitude:>SheetRoll;fort|Reflex:>SheetRoll;ref|Will:>SheetRoll;will
+  --=SaveRoll|1d20 [Base] + [*S:[&SheetSave]] [Save]
+  --+|[*S:t-name] rolls a [$SaveRoll] for their [&SaveType] saving throw.
+--X|
+
+--:SheetRoll|
+	--&SheetSave|[%1%]
+	--<|
+}}

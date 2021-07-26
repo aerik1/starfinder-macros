@@ -1,0 +1,66 @@
+!scriptcard {{
++++Starfinder+++
+--#sourceToken|@{selected|token_id}
+--#emoteState|hidden
+--#title|[*S:character_name] - Eldritch Shot
+--#buttonFontSize|medium
+
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+
+-->GetWeaponInfo|
+--IWhat weapon are you ; enhancing?|q;WeaponUsed;What weapon are you enhancing?[&QueryWeaponOutput]
+--~WeaponName|string;before;-;[&WeaponUsed]
+--Rfind|[*S:character_id];[&WeaponName];repeating_attack;name
+--?[*S:[*R:arc]_weapons_status] -inc Wrecked|>SystemDown
+
+--=CaptainBonus|0
+-->AskComputerBonus|[*S:character_id]
+-->CheckArcaneLab|
+--?[*S:demand_on] -eq Yes -and [*S:demand_target] -eq Gunner|>SetCaptainBonus;4
+--?[*S:encourage_on] -eq Yes -and [*S:encourage_target] -eq Gunner|>SetCaptainBonus;2
+--=EldritchDC|1.5 * [*S:ship_tier] {FLOOR} + 10 
+--=MysticismRoll|1d20 + [*[&SpeakingAs]:Mysticism] + [$CaptainBonus] [Captain Bonus] + [$ComputerBonus] [Computer Bonus] + [$LabBonus] [Lab Bonus]
+--?[$MysticismRoll] -ge [$PatchDC]|Success|Failure
+
+--:Success|
+	--@setattr|_charid [*S:character_id] _eldritch_shot|[*R:name] _silent
+	--+Success|[i]Your mystic energy allows the [b][*R:name] to fire farther[/b] the next shot with a roll of [$MysticismRoll].[/i]
+	--X|
+
+--:Failure|
+	--+Failed|[i]You [b]fail to enhance the [*R:name][/b] this round with a roll of [$MysticismRoll]![/i]
+	--X|
+	
+--:GetWeaponInfo|
+	--Rfirst|[*S:character_id];repeating_attack
+	--:WeaponLoop|
+	--?"[*R:name]" -inc Loaded|WeaponDone
+	--&QueryWeaponOutput|+|[*R:name]-[*R:arc] arc
+	--Rnext|
+	--Rnext|
+	--^WeaponLoop|
+	--:WeaponDone|
+	--<| 
+	
+--:SetCaptainBonus|
+	--=CaptainBonus|[%1%]
+	--?[$CaptainBonus] -eq 4|WipeDemand
+	--@setattr|_charid [*S:character_id] _encourage_on|No _encourage_target|None _silent
+	--<|
+	--:WipeDemand|
+	--@setattr|_charid [*S:character_id] _demand_on|No _demand_target|None _silent
+	--<|
+	
+--:CheckArcaneLab|
+	--=LabBonus|0
+	--Rfirst|[*S:character_id];repeating_system
+	--:SystemLoop|
+	--?"[*R:name]" -inc Loaded|SystemDone
+	--?"[*R:name]" -inc "Arcane Laboratory"|SystemFound
+	--Rnext|
+	--^SystemLoop|
+	--:SystemFound|
+	--=LabBonus|2
+	--:SystemDone|
+	--<| 
+}}

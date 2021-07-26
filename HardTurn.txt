@@ -1,0 +1,52 @@
+!scriptcard {{
++++Starfinder+++
+--#sourceToken|@{selected|token_id}
+--#emoteState|hidden
+--#title|[*S:character_name] - Hard Turn
+--#buttonFontSize|medium
+
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+
+
+--?[*S:engines_status] -inc Wrecked -or [*S:engines_status] -eq -4|>SystemDown
+
+--=CaptainBonus|0
+-->AskComputerBonus|[*S:character_id]
+--?[*S:demand_on] -eq Yes -and [*S:demand_target] -eq Gunner|>SetCaptainBonus;4
+--?[*S:encourage_on] -eq Yes -and [*S:encourage_target] -eq Gunner|>SetCaptainBonus;2
+--=AthleticsRoll|[*[&SpeakingAs:athletics]
+--=AcrobaticsRoll|[*[&SpeakingAs:acrobatics]
+--~HigherSkill|math;max;[$AthleticsRoll];[$AcrobaticsRoll]
+
+--=HardTurnDC|1.5 * [*S:ship_tier] {FLOOR} + 10 
+--=CritFail|[$HardTurnDC] - 10
+--=SkillRoll|1d20 + [$HigherSkill] [Skill] + [$CaptainBonus] [Captain Bonus] + [$ComputerBonus] [Computer Bonus]
+--?[$SkillRoll] -le [$CritFail]|CriticalFailure
+--?[$SkillRoll] -ge [$HardTurnDC]|Success|Failure
+
+--:Success|
+	--+Success|[i]Your manual adjustments allow [b][*R:name] to make 1 sharper turn[/b] this round  with a roll of [$SkillRoll].[/i]
+	--X|
+
+--:Failure|
+	--+Failed|[i]You [b]fail to enhance the maneuverability of [*R:name][/b] this round with a roll of [$SkillRoll]![/i]
+	--X|
+	
+--:CriticalFailure|
+	--+Critical Failure!|[i]Your manual adjustments went [b]very wrong[/b] and you have worsened [*S:character_name]'s maneuverability by 1 this round with a roll of [$SkillRoll]. [/i]
+	--@setattr|_charid [*S:character_id] _hard_turn_failure|Yes _silent
+	--X|
+	
+--:SetCaptainBonus|
+	--=CaptainBonus|[%1%]
+	--?[$CaptainBonus] -eq 4|WipeDemand
+	--@setattr|_charid [*S:character_id] _encourage_on|No _encourage_target|None _silent
+	--<|
+	--:WipeDemand|
+	--@setattr|_charid [*S:character_id] _demand_on|No _demand_target|None _silent
+	--<|
+	
+ --:SystemDown|
+	--+System Down|[i]This action [b]cannot be performed[/b] until the system is repaired by an Engineer.[/i]
+    --X|
+}}

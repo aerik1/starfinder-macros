@@ -1,0 +1,42 @@
+!scriptcard {{
+--#sourceToken|@{selected|token_id}
+--#emoteState|hidden
+--#title|[*S:character_name] - Patch
+--#buttonFontSize|medium
+
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+
+--IWhat system are you ; patching?|q;PatchTarget;What system are you working on?|Life Support|Sensors|Engines|Power Core|Forward Weapons|Starboard Weapons|Aft Weapons|Port Weapons|Aft
+--~ModAttribute|string;replace; ;_;[&PatchTarget]
+
+
+--C[*S:[&ModAttribute]_status]|-2:>SetDCActions;10;1|-4:>SetDCActions;15;2
+--?[*S:[&ModAttribute]_status] -inc wrecked|>SetDCActions;20;3
+
+--=EngineeringRoll|1d20 + [*[&SpeakingAs]:engineering]
+--?[$EngineeringRoll] -ge [$PatchDC]|Success|Failure
+
+--:Success|
+	--=ActionsRemaining|[$NumberActions] - 1
+	--?[*S:[&PatchActions]] -gt 0|=ActionsRemaining;[*S:[&PatchActions]] - 1
+	--?[EngineeringRoll.Base] -eq 20|=ActionsRemaining;[$ActionsRemaining] - 1
+	--?[$ActionsRemaining] -le 0|PatchDone
+	--+Success|[i]Your [b]patch action was successful[/b] with a roll of [$EngineeringRoll] and the [&PatchTarget] system on [*S:character_name] needs [$ActionsRemaining] more patch actions to be complete. [/i]
+	--@setattr|_charid [*S:character_id] _[&PatchActions]|[$ActionsRemaining] _silent
+	--X|
+	--:PatchDone|
+	--+Success|[i]Your [b]patching was successful[/b] and the [&PatchTarget] system on [*S:character_name] is functioning one step less severe with a roll of [$EngineeringRoll]![/i]
+	--@setattr|_charid [*S:character_id] _[&ModAttribute]_patch|1 _silent _[&PatchActions]|0
+	--X|
+
+--:Failure|
+	--+Failed|[i]You [b]fail to contribute to the patch this round[/b] this round with a roll of [$EngineeringRoll]![/i]
+	--X|
+	
+--:SetDCActions|
+	--=PatchDC|[*S:ship_tier] * 2 + [%1%]
+	--=NumberActions|[%2%]
+	--&PatchActions|[&ModAttribute]_patch_actions
+	--<|
+
+}}

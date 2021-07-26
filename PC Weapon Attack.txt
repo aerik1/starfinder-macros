@@ -1,0 +1,540 @@
+!scriptcard {{ 
++++Starfinder+++
+  --#sourceToken|CharacterID
+  --Lsettings|[*S:character_name]
+  --&AlterShow|none
+  --?[*S:sheet_type] -eq npc|>NPCSettings
+  
+  --Rfind|[*S:character_id];WeaponName;repeating_attack;name
+  --?"[*R:name]" -inc Loaded|Error
+  
+  --:CardStart|
+	--#title|[*S:t-name] - [*R:name]
+	--#leftsub|[*R:special]
+	--?[*R:engagement_range] -eq melee|&RightSub;Melee|&RightSub;Range [*R:range] ft.
+	--#rightsub|[&RightSub]
+	--?[*R:ammo] -eq 0|NoAmmoLeft
+    --#emoteText|[*S:t-name] attacks [*T:t-name] with their [*R:name].
+	--=AttackNumber|1
+  
+  --:BuildVariables|
+	--=BoostDamage|0
+	--=TrickDamage|0
+	--~StrikeValue|string;replace;+;;[*R:total]
+	--=StrikeValue|[&StrikeValue]
+	--=WeaponCritSaveDC|[*R:level] \ 2 + 10 + [*R:ability]
+	--&WhatAttack|AttackMode
+	--?[&WhatAttack] -eq Single|=FullAttack;0|=FullAttack;4
+	--?[&WhatAttack] -eq Full -and "[*R:special]" -inc automatic|>AskAuto 
+	--?"[*R:special]" -inc blast|BlastAttack
+	--?"[*R:special]" -inc line|LineAttack
+	--?"[*R:special]" -inc explode|Explosion
+	--?"[*R:special]" -inc boost|>AskBoost
+	--IWhat is your; target?|t;targetToken;Target
+	--#targetToken|[&targetToken]
+	--?[*R:engagement_range] -eq ranged|>CheckRange
+	--?"[*R:special]" -inc operative -or "[*R:category]" -eq "small_arm" -and "[*S:class_1_name]" -inc Operative -and [$FullAttack] -eq 0|>AskTrickAttack
+	-->EACorKAC|
+	
+  --:Rolls|  
+	--?[*T:cover] -eq Full|FullCover
+	--C[*T:cover]|Improved:>AdjustCover;8;4|Normal:>AdjustCover;4;2|Partial:>AdjustCover;2;1|Soft:>AdjustCover;4;0
+	--=FortSave|1d20 + [*T:fort]
+	--=RefSave|1d20 + [*T:ref]
+	--=AttackRoll|1d20 [Base] + [$StrikeValue] [Strike Bonus] - [$FullAttack] [Full Attack] 	
+	--=DamageRoll|[*R:damage_dice] [Base] + [*R:damage_ability] [Ability Mod]
+	--+Attack|[*S:t-name] rolls [$AttackRoll] against [*T:t-name]'s AC.
+  
+  --:HitDetermination| 
+	--?[$AttackRoll.Base] -eq "1"|Fumble
+	--=ConcealmentRoll|1d100
+	--?[*T:concealment] -gt [$ConcealmentRoll]|MissConcealment
+	--?[$AttackRoll.Base] -eq "20"|Crit
+	--?[$AttackRoll] -ge [$WhatToHit]|Hit
+	--:MissConcealment|
+	--+Miss|[i][*S:character_name] [b]misses[/b] with their [*R:name] attack![/i]
+	--?[*R:engagement_range] -eq ranged|>ReduceAmmo
+	--?[&WhatAttack] -eq Full -and [$AttackNumber] -lt [*R:full_attack_number]|NextAttack
+	--X|
+  
+  --:Crit|
+	--=CritDamage|[$DamageRoll] * 2 
+	--+Critical Strike!|[i][*S:t-name] deals [b][$CritDamage] [*R:type][/b] damage! [/i]
+	--?[*R:engagement_range] -eq ranged|>ReduceAmmo
+	--?[&BoostMode] -eq Yes|>AddBoostFire;Crit
+	--?[$TrickSuccess] -eq 1|>AddTrick;Crit
+	--=TotalDamage|[$CritDamage] + [$BoostDamage] + [$TrickDamage]
+	-->DamagetoSPorHP|
+	-->WeaponCritEffect|
+	--?[&WhatAttack] -eq Full -and [$AttackNumber] -lt [*R:full_attack_number]|NextAttack
+	--X|
+    
+  --:Fumble|
+	--+Fumble|[i][*S:t-name] [button]Fumbles::~GenericMacro|FumbleRoll[/button] their [*R:name] attack![/i]
+	--?[*R:engagement_range] -eq ranged|>ReduceAmmo
+	--X|
+    
+  --:Hit|
+	--+Hit!|[i][*S:t-name] deals [b][$DamageRoll] [*R:type] damage[/b]! [/i]
+	--?[*R:engagement_range] -eq ranged|>ReduceAmmo
+	--?[&BoostMode] -eq Yes|>AddBoostFire;Hit
+	--?[$TrickSuccess] -eq 1|>AddTrick;Hit
+	--=TotalDamage|[$DamageRoll] + [$BoostDamage] + [$TrickDamage]
+	-->DamagetoSPorHP|
+	--?[&WhatAttack] -eq Full -and [$AttackNumber] -lt [*R:full_attack_number]|NextAttack
+	--X|
+
+  --:NextAttack|
+	--?[*R:ammo] -eq 0|NoAmmoLeft
+	--=AttackNumber|[$AttackNumber] + 1
+	--IWhat is your; next target?|t;targetToken;Target
+	--#targetToken|[&targetToken]
+	--^BuildVariables|
+
+  --:Error|
+	--+Nothing found|No weapon loaded.
+	
+  --:ReduceAmmo|
+	--=AmmoUsage|[*R:usage]
+	--?[&BoostMode] -eq Yes|=AmmoUsage;[$AmmoUsage]*2
+	--@modbattr|_silent _charid [*S:character_id] _repeating_attack_[*R:id]_ammo|-[$AmmoUsage] 
+	--<|
+	
+  --:NoAmmoLeft|
+	--+Empty|[*R:name] is out of ammunition! You must charge or reload!
+	--X|
+	
+  --:EACorKAC|
+    --?"[*R:type]" -eq slashing -or "[*R:type]" -eq piercing -or "[*R:type]" -eq bludgeoning|=WhatToHit;[*T:kac]|=WhatToHit;[*T:eac]
+	--?"[*R:type]" -eq slashing -or "[*R:type]" -eq piercing -or "[*R:type]" -eq bludgeoning|&TypeAC;kac|&TypeAC;eac
+	--<|
+	
+  --:WeaponCritEffect|
+	--?"[*R:crit]" -eq Staggered|>Staggered
+	--?"[*R:crit]" -eq Knockdown|>Knockdown
+	--?"[*R:crit]" -inc Burn|>Burn
+	--?"[*R:crit]" -eq "Severe Wound"|>SevereWound
+	--?"[*R:crit]" -inc Arc|>Arc
+	--?"[*R:crit]" -inc InjectionDC|>InjectionDC
+	--?"[*R:crit]" -inc Bleed|>Bleed
+	--?"[*R:crit]" -eq Wound|>Wound
+	--?"[*R:crit]" -eq Deafen|>Deafen
+	--?"[*R:crit]" -inc Corrode|>Corrode
+	--<|
+	
+  --:Arc|
+	--~ArcString|string;split; ;[*R:crit]
+	--=ArcDamage|[&ArcString2]
+	--IWhat is your; arc target within 10 feet?|t;ArcTargetToken;Target
+	--?[*T:t-id] -eq [&ArcTargetToken]|SkipArc
+	--+Zap!|[i][*[&ArcTargetToken]:t-name] also receives [b][$ArcDamage] electrical damage[/b]![/i]
+	--=TotalDamage|[$ArcDamage]
+	-->DamagetoSPorHP|
+	--:SkipArc|
+	--<|
+	
+  --:Bleed|
+	--~BleedString|string;split; ;[*R:crit]
+	--=BleedDamage|[&BleedString]
+	--+Bleeding!|[i][*T:t-name] also begins to bleed for [b][$BleedDamage] damage[/b]![/i]
+	--@token-mod|_ignore-selected _ids [*T:t-id] _set statusmarkers|half-heart:[$BleedDamage]
+	--<|
+	
+  --:Burn|
+	--~BurnString|string;split; ;[*R:crit]
+	--=BurnDamage|[&BurnString2]
+	--+On Fire!|[i][*T:t-name] also catches on fire for [b][$BurnDamage] persistant fire damage[/b]![/i]
+	--@token-mod|_ignore-selected _ids [*T:t-id] _set statusmarkers|half-haze:[$BurnDamage]
+	--<|
+	
+  --:Corrode|
+	--~CorrodeString|string;split; ;[*R:crit]
+	--=CorrodeDamage|[&CorrodeString2]
+	--+Melting!|[i][*T:t-name] also receives [b][$CorrodeDamage] persistant acid damage[/b]![/i]
+	--@token-mod|_ignore-selected _ids [*T:t-id] _set statusmarkers|half-haze:[$CorrodeDamage]
+	--<|
+	
+  --:Deafen|
+	--=FortSave|1d20 + [*T:fort]
+	--=DeafDuration|1d4
+	--?[$FortSave] -ge [$WeaponCritSaveDC]|SkipDeafen
+	--+What?!|[i][*T:t-name] is also [b]deafened[/b] for [$DeafDuration] minutes![/i]
+	--:SkipDeafen|
+	--+Saved!|[i][*T:t-name] suffers no additional effects from the critical strike[/i].
+	--<|
+	
+  --:InjectionDC|
+	--~InjectionIncrease|string;after;+;[*R:crit]
+	--+Nice Shot!|[i]If [*R:name] is delivering a poison or drug, the DC to the injection is increased by [&InjectionIncrease][/i].
+	--<|
+  
+  --:Knockdown|
+    --+Knocked Down!|[i][*T:t-name] is also [b]knocked prone[/b]![/i]
+	--<|
+	
+  --:Staggered|
+	--?[$FortSave] -ge [$WeaponCritSaveDC]|SkipStaggered
+	--+Staggered!|[i][*T:t-name] is also [b]Staggered[/b] for 1 round![/i]
+	--:SkipStaggered|
+	--+Saved!|[i][*T:t-name] suffers no additional effects from the critical strike[/i].
+	--<|	
+
+  --:SevereWound|
+	--=WoundRoll1|[T#Wound]
+	--=WoundRoll2|[T#Wound]
+	--IWhere is the ;critically hit area?|q;RollNumber;Where is the critically hit area?|[$WoundRoll1.tableEntryText],1|[$WoundRoll2.tableEntryText],2
+	--&TableRoll|[$WoundRoll[&RollNumber].tableEntryText]
+	--~TableRoll|string;split;|;[&TableRoll]
+	--?[&TableRoll2] -eq " "|SkipSevereSavingThrow|RollSevereSavingThrow
+	--:SkipSevereSavingThrow|
+	--=BleedDamage|1d6
+	--+Bleeding!|[i][*T:t-name] also begins to bleed for [b][$BleedDamage] damage[/b]![/i]
+	--@token-mod|_ignore-selected _ids [*T:t-id] _set statusmarkers|half-heart:[$BleedDamage]
+	--<|
+	--:RollSevereSavingThrow|
+	--?[[&TableRoll2]Save] -ge [$WeaponCritSaveDC]|SkipSevereWound
+	--+Wounded!|[i][*T:t-name] [&TableRoll3][/i].
+	--<|
+	--:SkipSevereWound|
+	--+Saved!|[i][*T:t-name] suffers no additional effects from the critical strike[/i].
+	--<|
+	
+  --:Wound|
+    --=WoundRoll|[T#Wound]
+	--&TableRoll|[$WoundRoll.tableEntryText]
+	--~TableRoll|string;split;|;[&TableRoll]
+	--?[&TableRoll2] -eq " "|SkipSavingThrow|RollSavingThrow
+	--:SkipSavingThrow|
+	--=BleedDamage|1d6
+	--+Bleeding!|[i][*T:t-name] also begins to bleed for [b][$BleedDamage] damage[/b]![/i]
+	--@token-mod|_ignore-selected _ids [*T:t-id] _set statusmarkers|half-heart:[$BleedDamage]
+	--<|
+	--:RollSavingThrow|
+	--?[[&TableRoll2]Save] -ge [$WeaponCritSaveDC]|SkipWound
+	--+Wounded!|[i][*T:t-name] [&TableRoll3][/i].
+	--<|
+	--:SkipWound|
+	--+Saved!|[i][*T:t-name] suffers no additional effects from the critical strike[/i].
+	--<|
+	
+  --:AskAuto|
+	--IDo you want to switch to ;automatic fire?|q;AutoMode;Are you using this weapon in Automatic Fire mode?|No|Yes
+	--?[&AutoMode] -eq Yes|AutomaticFire
+	--<|
+	
+  --:AutomaticFire|
+	-->EACorKAC|
+	--IWhat is the ;firing angle?|q;FiringAngle;What is the firing angle?|0|45|90|135|180|225|270|315
+	--=FiringRange|[*R:range] \ 10
+	--=MaxTargets|[*R:ammo] \2
+	--@weapon-arc| _addEdge [&FiringAngle]|90 [$FiringRange]u 
+	--IHow many ;targets in the arc?|q;VictimCount;How many targets? You can have up to [$MaxTargets].|1|2|3|4|5|6|7|8|9|10
+	--@weapon-arc |_clear
+	--=VictimCount|[&VictimCount]
+	--=i|0
+	--:AutoFireTargetSelection|
+	--=i|[$i] + 1
+	--ISelect your next ;target|t;Victim[$i.Total];Choose next target.
+	--?[$i] -ne [$VictimCount]|AutoFireTargetSelection|AutoFireTargetsDone
+	--:AutoFireTargetsDone|
+	--=AttackRoll|1d20 [Base] + [$StrikeValue] [Strike Bonus] - 4 [Full Attack] 	
+	--=DamageRoll|[*R:damage_dice] [Base] + [*R:damage_ability] [Ability Mod]
+	--?[$AttackRoll.Base] -eq 1|AOEAttackFumble
+	--+Attack|[*S:t-name] rolls a [$AttackRoll] attacking everyone in a cone in front of them. 
+	--+|[c][b]Results:[/b][/c]
+	--=j|0
+	--:ApplyAutoFireDamage|
+	--=j|[$j] + 1
+	--#targetToken|[&Victim[$j.Total]]
+	--?[$AttackRoll] -ge [*T:[&TypeAC]]|AutoFireHit|AutoFireMiss
+	--:AutoFireHit|
+	--+Hit!|[i][*S:t-name] deals [b][$DamageRoll] [*R:type] damage[/b] with their [*R:name] automatic fire attack against [*T:t-name]! [/i]
+	--=TotalDamage|[$DamageRoll]
+	-->DamagetoSPorHP|
+	--?[$j] -eq [$VictimCount]|AutoFireDone|ApplyAutoFireDamage
+	--:AutoFireMiss|
+	--+Miss|[i][*S:character_name] [b]misses[/b] with their [*R:name] automatic fire attack against [*T:t-name]![/i]
+	--?[$j] -eq [$VictimCount]|AutoFireDone|ApplyAutoFireDamage
+	--:AutoFireDone|
+	--@setattr|_silent _charid [*S:character_id] _repeating_attack_[*R:id]_ammo|0
+	--X|
+	
+  --:BlastAttack|
+	-->EACorKAC|
+	--IWhat is the ;firing angle?|q;FiringAngle;What is the firing angle?|0|45|90|135|180|225|270|315
+	--=FiringRange|[*R:range] \ 5
+	--@weapon-arc| _addEdge [&FiringAngle]|90 [$FiringRange]u 
+	--IHow many ;targets in the arc?|q;VictimCount;How many targets?|1|2|3|4|5|6|7|8|9|10
+	--@weapon-arc |_clear
+	--=VictimCount|[&VictimCount]
+	--=i|0
+	--:BlastFireTargetSelection|
+	--=i|[$i] + 1
+	--ISelect your next ;target|t;Victim[$i.Total];Choose next target.
+	--?[$i] -ne [$VictimCount]|BlastFireTargetSelection|BlastFireTargetsDone
+	--:BlastFireTargetsDone|
+	--=AttackRoll|1d20 [Base] + [$StrikeValue] [Strike Bonus] - [$FullAttack] [Full Attack] - 2 [Blast Attack]
+	--=DamageRoll|[*R:damage_dice] [Base] + [*R:damage_ability] [Ability Mod]
+	--=CritDamage|[$DamageRoll] * 2
+	--?[$AttackRoll.Base] -eq 1|AOEAttackFumble
+	--+Attack|[*S:t-name] rolls a [$AttackRoll] blasting everyone in a [*R:range]' cone in front of them. 
+	--+|[c][b]Results:[/b][/c]
+	--=j|0
+	--:ApplyBlastFireDamage|
+	--=j|[$j] + 1
+	--#targetToken|[&Victim[$j.Total]]
+	--?[$AttackRoll.Base] -eq 20|BlastFireCrit
+	--?[$AttackRoll] -ge [*T:[&TypeAC]]|BlastFireHit|BlastFireMiss
+	--:BlastFireCrit|
+	--+Critical Strike!|[i][*S:t-name] deals [b][$CritDamage] [*R:type] damage[/b] with their [*R:name] blast attack against [*T:t-name]! [/i]
+	--=TotalDamage|[$CritDamage]
+	-->DamagetoSPorHP|
+	--?[$j] -eq [$VictimCount]|BlastFireDone|ApplyBlastFireDamage
+	--:BlastFireHit|
+	--+Hit!|[i][*S:t-name] deals [b][$DamageRoll] [*R:type] damage[/b] with their [*R:name] blast attack against [*T:t-name]! [/i]
+	--=TotalDamage|[$DamageRoll]
+	-->DamagetoSPorHP|
+	--?[$j] -eq [$VictimCount]|BlastFireDone|ApplyBlastFireDamage
+	--:BlastFireMiss|
+	--+Miss|[i][*S:character_name] [b]misses[/b] with their [*R:name] blast attack against [*T:t-name]![/i]
+	--?[$j] -eq [$VictimCount]|BlastFireDone|ApplyBlastFireDamage
+	--:BlastFireDone|
+	-->ReduceAmmo|
+	--?[&WhatAttack] -eq Full -and [$AttackNumber] -lt [*R:full_attack_number]|NextAttack
+	--X|
+	
+  --:AskBoost|
+	--IIs this a  ;boosted attack?|q;BoostMode;Are you using this weapon after a move-equivalent Boost action?|No|Yes
+	--~BoostString|string;split; ;[*R:special]
+	--=BoostDamage|[&BoostString2]
+	--<|
+	
+  --:AddBoostFire|
+    --?[%1%] -eq Crit|=BoostDamage;[$BoostDamage]*2
+	--+Boost!|[i][*S:t-name] deals an additional[b][$BoostDamage] damage[/b] with their boosted attack against [*T:t-name]! [/i]
+	--<|
+	
+  --:Explosion|
+	--#leftsub|Explosion
+	--#rightsub|
+	--IWhich token is your ;explosion target?|t;ExplosionTarget|Explosion Target
+	--IHow many ;targets in the area?|q;VictimCount;How many targets?|1|2|3|4|5|6|7|8|9|10
+	--=VictimCount|[&VictimCount]
+	--=i|0
+	--:ExplosionTargetSelection|
+	--=i|[$i] + 1
+	--ISelect your next ;target|t;Victim[$i.Total];Choose next target.
+	--?[$i] -ne [$VictimCount]|ExplosionTargetSelection|ExplosionTargetsDone
+	--:ExplosionTargetsDone|
+	--=AttackRoll|1d20 [Base] + [$StrikeValue] [Strike Bonus] - [$FullAttack] [Full Attack]
+	--=DamageRoll|[*R:damage_total]
+	--+Fire in the Hole!|[*S:t-name] rolls a [$AttackRoll] to throw a [*R:name].
+	--?[$AttackRoll.Base] -eq 20|=DamageRoll;[$DamageRoll] * 2
+	--?[$AttackRoll] -ge 5 -and [$AttackRoll.Base] -ne 1|HitTarget
+	--&MissDirection|[*T:MissDirection]
+	--=MissDistance|1d4 * 5
+	--+Uh oh|[i]The [*R:name] doesn't go where it's supposed to. It explodes [b][&MissDirection.TableEntryText] [$MissDistance] ft.[/b] away.[/i]
+	--X|
+		--:HitTarget|
+			--=j|0
+			--=SaveDC|[*R:level] \ 2 + 10 + [*S:dexterity_mod] - [$FullAttack]
+			--~Component|string;split;|;[*R:special]
+			--&Condition|[&Component2]
+			--&Duration|[&Component3]
+			--&Range|[&Component4]
+			--?[$DamageRoll] -eq 0|NoDamageExplosion
+			--?"[&Condition]" -eq 0 -and "[&Duration]" -eq 0|OnlyDamageExplosion
+			--?"[&Condition]" -ne 0 -and "[&Duration]" -eq 0|DamageEffectExplosion
+		--:DamageConditionExplosion|
+			--+Kaboom!|[i][*S:t-name]'s [*R:name] explodes for [b][$DamageRoll] [*R:type] damage[/b] in a [&Range] area. All within the effect may make a Reflex save at [b]DC [$SaveDC.Total][/b] for half damage and to avoid any additional effects.[/i]
+			--+|[c][b]Results:[/b][/c]
+			--:DamageConditionExplosionLoop|
+			--=j|[$j] + 1
+			--#targetToken|[&Victim[$j.Total]]
+			--=RefSave|1d20 + [*T:ref]
+			--=HalfDamage|[$DamageRoll] \ 2
+			--?[$RefSave] -ge [$SaveDC]|DamageConditionExplosionSave|DamageConditionExplosionFail
+			--:DamageConditionExplosionSave|
+			--+Saved!|[i][*T:t-name] [b]saves[/b] and takes [b][$HalfDamage] damage[/b]![/i]
+			--=TotalDamage|[$HalfDamage]
+			-->DamagetoSPorHP|
+			--?[$j] -lt [$VictimCount]|DamageConditionExplosionLoop
+			--X|
+			--:DamageConditionExplosionFail|
+			--+Failed!|[i][*T:t-name] [b]fails[/b] and takes [b][$DamageRoll] damage[/b]! They are also [&Condition] for [&Duration].[/i]
+			--=TotalDamage|[$DamageRoll]
+			-->DamagetoSPorHP|
+			--@setattr|_charid [*T:character_id] _set [&Condition]|1 _silent
+			--?[$j] -lt [$VictimCount]|DamageConditionExplosionLoop
+			--X|
+		--:NoDamageExplosion|
+			--+Kaboom!|[i][*S:t-name]'s [*R:name] explodes and those that fail a Reflex save at [b]DC [$SaveDC.Total] are [&Condition] for [&Duration].[/i]
+			--+|[c][b]Results:[/b][/c]
+			--:NoDamageExplosionLoop|
+			--=j|[$j] + 1
+			--#targetToken|[&Victim[$j.Total]]
+			--=RefSave|1d20 + [*T:ref]
+			--?[$RefSave] -ge [$SaveDC]|NoDamageExplosionSave|NoDamageExplosionFail
+			--:NoDamageExplosionSave|
+			--+Saved!|[i][*T:t-name] [b]saves[/b] and avoids the effect![/i]
+			--?[$j] -lt [$VictimCount]|NoDamageExplosionLoop
+			--X|
+			--:NoDamageExplosionFail|
+			--+Failed!|[i][*T:t-name] [b]fails[/b] and is [&Condition] for [&Duration]![/i]
+			--@setattr|_charid [*T:character_id] _set [&Condition]|1 _silent
+			--?[$j] -lt [$VictimCount]|NoDamageExplosionLoop
+			--X|
+		--:OnlyDamageExplosion|
+			--+Kaboom!|[i][*S:t-name]'s [*R:name] explodes for [b][$DamageRoll] [*R:type] damage[/b] in a [&Range] area. All within the effect may make a Reflex save at [b]DC [$SaveDC.Total][/b] for half damage.[/i]
+			--+|[c][b]Results:[/b][/c]
+			--:OnlyDamageExplosionLoop|
+			--=j|[$j] + 1
+			--#targetToken|[&Victim[$j.Total]]
+			--=RefSave|1d20 + [*T:ref]
+			--=HalfDamage|[$DamageRoll] \ 2
+			--?[$RefSave] -ge [$SaveDC]|OnlyDamageExplosionSave|OnlyDamageExplosionFail
+			--:OnlyDamageExplosionSave|
+			--+Saved!|[i][*T:t-name] [b]saves[/b] and takes [b][$HalfDamage] damage[/b]![/i]
+			--=TotalDamage|[$HalfDamage]
+			-->DamagetoSPorHP|
+			--?[$j] -lt [$VictimCount]|NoDamageExplosionLoop
+			--X|
+			--:OnlyDamageExplosionFail|
+			--+Failed!|[i][*T:t-name] [b]fails[/b] and takes [b][$DamageRoll] damage[/b]![/i]
+			--=TotalDamage|[$DamageRoll]
+			-->DamagetoSPorHP|
+			--?[$j] -lt [$VictimCount]|OnlyDamageExplosionLoop
+			--X|
+		--:DamageEffectExplosion|
+			--~DamageEffect|string;split; ;[&Condition]
+			--=ConditionDamage|[&DamageEffect2]
+			--+Kaboom!|[i][*S:t-name]'s [*R:name] explodes for [b][$DamageRoll] [*R:type] damage[/b] in a [&Range] area. All within the effect may make a Reflex save at [b]DC [$SaveDC.Total][/b] for half damage and to avoid any additional effects.[/i]
+			--+|[c][b]Results:[/b][/c]
+			--:DamageEffectExplosionLoop|
+			--=j|[$j] + 1
+			--#targetToken|[&Victim[$j.Total]]
+			--=RefSave|1d20 + [*T:ref]
+			--=HalfDamage|[$DamageRoll] \ 2
+			--?[$RefSave] -ge [$SaveDC]|DamageEffectExplosionSave|DamageEffectExplosionFail
+			--:DamageEffectExplosionSave|
+			--+Saved!|[i][*T:t-name] [b]saves[/b] and takes [b][$HalfDamage] damage[/b]![/i]
+			--=TotalDamage|[$HalfDamage]
+			-->DamagetoSPorHP|
+			--?[$j] -lt [$VictimCount]|DamageEffectExplosionLoop
+			--X|
+			--:DamageEffectExplosionFail|
+			--+Failed!|[i][*T:t-name] [b]fails[/b] and takes [b][$DamageRoll] damage[/b]! They are also [&DamageEffect1] for [$ConditionDamage] damage.[/i]
+			--=TotalDamage|[$DamageRoll]
+			-->DamagetoSPorHP|
+			--@setattr|_charid [*T:character_id] _set [&DamageEffect1]|1 _silent
+			--?[$j] -lt [$VictimCount]|DamageEffectExplosionLoop
+			--X|
+
+	
+  --:LineAttack|
+	-->EACorKAC|
+	--IWhat is the ;firing angle?|q;FiringAngle;What is the firing angle?|0|45|90|135|180|225|270|315
+	--=FiringRange|[*R:range] \ 5
+	--@weapon-arc| _add [&FiringAngle]|10 [$FiringRange].5u 
+	--IHow many ;targets in the arc?|q;VictimCount;How many targets?|1|2|3|4|5|6|7|8|9|10
+	--@weapon-arc |_clear
+	--=VictimCount|[&VictimCount]
+	--=i|0
+	--:LineFireTargetSelection|
+	--=i|[$i] + 1
+	--ISelect your next ;target|t;Victim[$i.Total];Choose next target.
+	--?[$i] -ne [$VictimCount]|LineFireTargetSelection|LineFireTargetsDone
+	--:LineFireTargetsDone|
+	--=AttackRoll|1d20 [Base] + [$StrikeValue] [Strike Bonus] - [$FullAttack] [Full Attack] 
+	--=DamageRoll|[*R:damage_dice] [Base] + [*R:damage_ability] [Ability Mod]
+	--=CritDamage|[$DamageRoll] * 2
+	--?[$AttackRoll.Base] -eq 1|AOEAttackFumble
+	--+Attack|[*S:t-name] rolls a [$AttackRoll] hitting everyone in a [*R:range]' line in front of them. 
+	--+|[c][b]Results:[/b][/c]
+	--=j|0
+	--:ApplyLineFireDamage|
+	--=j|[$j] + 1
+	--#targetToken|[&Victim[$j.Total]]
+	--?[$AttackRoll.Base] -eq 20 -and [$j] -eq 1|LineFirecrit
+	--?[$AttackRoll] -ge [*T:[&TypeAC]]|LineFireHit|LineFireMiss
+	--:LineFirecrit|
+	--+Critical Strike!|[i][*S:t-name] deals [b][$CritDamage] [*R:type] damage[/b] with their [*R:name] Line attack against [*T:t-name]! [/i]
+	--=TotalDamage|[$CritDamage]
+	-->DamagetoSPorHP|
+	--?[$j] -eq [$VictimCount]|LineFireDone|ApplyLineFireDamage
+	--:LineFireHit|
+	--+Hit!|[i][*S:t-name] deals [b][$DamageRoll] [*R:type] damage[/b] with their [*R:name] Line attack against [*T:t-name]! [/i]
+	--=TotalDamage|[$DamageRoll]
+	-->DamagetoSPorHP|
+	--?[$j] -eq [$VictimCount]|LineFireDone|ApplyLineFireDamage
+	--:LineFireMiss|
+	--+Miss|[i][*S:character_name] [b]misses[/b] with their [*R:name] Line attack against [*T:t-name]![/i]
+	--?[$j] -eq [$VictimCount]|LineFireDone|ApplyLineFireDamage
+	--:LineFireDone|
+	-->ReduceAmmo|
+	--@weapon-arc |_clear
+	--X|
+	
+  --:AskTrickAttack|
+	--IWill this be a; trick attack?|q;IsTrick;Is this a trick attack?|No|Yes
+	--?[&IsTrick] -eq Yes|>TrickAttack
+	--<|
+	
+  --:TrickAttack|
+	--IWhich trick attack ;skill?|q;TrickSkill;Which skill will you use for Trick Attack?|Athletics|Acrobatics|Bluff|Computers|Culture|Engineering|Intimidate|Perception|Sense Motive|Stealth|Survival
+	--~TrickSkill|string;replace; ;_;[&TrickSkill]
+	--=TrickDC|20 + [*T:character_level]
+	--?[*S:[&TrickSkill]] -lt [$TrickDC]|TrickFailed
+	--=TrickDice|[*S:class_1_level] \ 2
+	--?[*S:class_1_level] -lt 2|=TrickDamage;1d4|=TrickDamage;[$TrickDice]d8
+	--=TrickSuccess|1
+	--<|
+	--:TrickFailed|
+	--+No trick here!|[i][*T:t-name] did not fall for your trickery[/i]!
+	--<|
+	
+  --:AddTrick|
+	--?[%1%] -eq Crit|=TrickDamage;[$TrickDamage]*2
+	--+Fell for it!|[i][*S:t-name] deals an additional [b][$TrickDamage] damage[/b] with their trick attack against [*T:t-name]! [/i]
+	--<|
+  
+  --:AOEAttackFumble|
+	--+Fumble!|[i][*S:t-name] has rolled an [button]AOE Fumble::~GenericMacro|AOEFumbleRoll[/button] for their [*R:name] attack![/i]
+	--X|
+	
+  --:FullCover|
+	--+No line of effect|[*T:name] has full cover and cannot be targeted.
+	--X|
+	
+  --:AdjustCover|
+	--=WhatToHit|[$WhatToHit] + [%1%]
+	--=RefSave|[$RefSave] + [%2%]
+	--<|
+	
+  --:NPCSettings|
+	--Lsettings|npcsettings
+	--#whisper|GM
+	--&AlterShow|all
+	--<|
+	
+  --:DamagetoSPorHP|
+	--?[$TotalDamage] -gt [*T:sp]|HPDamage
+	--@alter|_target|[*T:t-id] _bar|1 _amount|-[$TotalDamage] _show|[&AlterShow]
+	--<|
+	--:HPDamage|
+	--=HPDamage|[$TotalDamage] - [*T:sp]
+	--@setattr|_charid [*T:character_id] _sp|0 _silent
+	--@alter|_target|[*T:t-id] _bar|3 _amount|-[$HPDamage] _show|[&AlterShow]
+	--<|
+	
+  --:CheckRange|
+	--~HowFarAway|euclideanpixel;[*S:t-id];[*T:t-id]
+	--=GridUnits|[$HowFarAway] / 70
+	--~NearestUnit|math;round;[$GridUnits] 
+	--=FeetFar|[$NearestUnit] * 5
+	--[$FeetFar] -gt [*R:range]|OutOfRange
+	--<|
+	--:OutOfRange|
+	--+Too Far!|[*T:t-name] is out of range for your [*R:name] attack. 
+	--X|
+}}

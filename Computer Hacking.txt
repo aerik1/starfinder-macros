@@ -1,0 +1,404 @@
+!scriptcard {{ 
+--Lsettings|npcsettings
+--#sourceToken|@{selected|token_id}
+--#emoteState|Hidden
+--#title|Computer Hacking
+--IWhat computer are you ; hacking?|t;TargetComputer;Computer Being Hacked
+--#targetToken|[&TargetComputer]
+--IDo you possess either a ; password or physical key?|q;PartialAccess;Do you possess either a password or physical key?|No|Yes
+--@setattr|_charid [*T:character_id] _partial_access_key|[&PartialAccess] _silent
+
+
+--:HackingMenu|
+--#leftsub|Hacking Menu
+--?[*T:partial_access_key] -eq Yes|=KeyBonus;5|=KeyBonus;0
+--+|[c][rbutton]Destroy System/Module::Destroy[/rbutton] [rbutton]Repair System/Module::Repair[/rbutton] [rbutton]Detect Fake Shell::DetectFakeShell[/rbutton] [rbutton]Disable Module::Disable[/rbutton] [rbutton]Manipulate Module::Manipulate[/rbutton] [rbutton]Gain Root Access::AccessRoot[/rbutton] [rbutton]Hack System::HackSystem[/rbutton] [rbutton]Hack Firewall::HackFirewall[/rbutton] [rbutton]Identify System Components::Identify[/rbutton][/c]
+--X|
+
+--:Destroy|
+	--?[*T:control_module_number_known] -eq No -and [*T:data_module_number_known] -eq No -and [*T:countermeasure_number_known] -eq No|MustIDFirst
+	-->WhichSystemQuery|
+	--IWhich ; system/module?|q;WhatModule;Which system?[&QueryOutput]
+	--#leftsub|Destroy System/Module
+	--~FormattedAttribute|string;replaceall; ;_;[&WhatModule]
+	--?[*T:[&FormattedAttribute]_firewall] -eq Firewalled|HackFirewallFirst
+	--=HackingDC|[*T:computer_tier] * 4 + 13 + [*T:security_upgrade] - [$KeyBonus]
+	--=Time|[*T:computer_tier] * 10
+	--=ComputerRoll|1d20 + [*S:computers]
+	--?[$ComputerRoll] -ge [$HackingDC]|DestroySuccess
+	--+Failure|[i]After [$Time.Raw] minutes, you have [b]failed[/b] to destroy [$WhatModule] with a Computers roll of [$ComputerRoll].[/i][br]
+	--^HackingMenu|
+	--X|
+	--:DestroySuccess|
+	--+Success|[i]After [$Time.Raw] minutes, you have [b]succeeded[/b] in destroying [$WhatModule] with a Computers roll of [$ComputerRoll].[/i][br]
+	--@setattr|_charid [*T:character_id] _[&FormattedAttribute]|Destroyed _silent
+	--^HackingMenu|
+	--X|
+	
+--:Repair|
+	--?[*T:control_module_number_known] -eq No -and [*T:data_module_number_known] -eq No -and [*T:countermeasure_number_known] -eq No|MustIDFirst
+	-->WhichSystemQuery|
+	--IWhich ; system/module?|q;WhatModule;Which system?[&QueryOutput]
+	--#leftsub|Destroy System/Module
+	--~FormattedAttribute|string;replaceall; ;_;[&WhatModule]
+	--#whisper|
+	--#leftsub|Repair System/Module
+	--=HackingDC|[*T:computer_tier] * 4 + 13 + [*T:security_upgrade] - [$KeyBonus]
+	--=CritFail|[$HackingDC] - 5
+	--=Time|[*T:computer_tier] * 10
+	--=ComputerRoll|1d20 + [*S:computers]
+	--?[$ComputerRoll] -ge [$HackingDC]|RepairSuccess
+	--?[$ComputerRoll] -le [$CritFail]|RepairCritFail|RepairFail
+	--+Critical Failure|[i]After [$Time.Raw] minutes, you have managed to [b]destroy[/b] the [&WhatModule] system with a Computers roll of [$ComputerRoll].[/i]
+	--@setattr|_charid [*T:character_id] _[&FormattedAttribute]|Destroyed _silent
+	--:RepairFail|
+	--+Failure|[i]After [$Time.Raw] minutes, you have [b]failed[/b] to repair the [&WhatModule] system with a Computers roll of [$ComputerRoll].[/i][br]
+	--^HackingMenu|
+	--X|
+	--:RepairSuccess|
+	--+Success|[i]After [$Time.Raw] minutes, you have [b]succeeded[/b] in repairing the [&WhatModule] system with a Computers roll of [$ComputerRoll].[/i][br]
+	--@setattr|_charid [*T:character_id] _[&FormattedAttribute]|Repaired _silent
+	--^HackingMenu|
+	--X|
+	
+--:DetectFakeShell|
+	--#whisper|
+	--#leftsub|Detect Fake Shell
+	--=HackingDC|[*T:computer_tier] * 4 + 13 + [*T:security_upgrade] - [$KeyBonus]
+	--=ComputerRoll|1d20 + [*S:computers]
+	--?[*T:fakeshell] -eq No|NoFakeShell
+	--?[$ComputerRoll] -ge [$HackingDC]|EscapedShell|NoFakeShell
+	--:EscapedShell|
+	--+Ah ha!|[i]You realize you have accessed a fake shell and disable it with a Computers roll of [$ComputerRoll].[/i][br]
+	--@setattr|_charid [*T:character_id] _fakeshell|No _silent
+	--^HackingMenu|
+	--X|
+	--:NoFakeShell|
+	--+Real Stuff|[i]You believe you are not in a fake shell on this system.[/i][br]
+	--^HackingMenu|
+	--X|
+	
+--:Disable|
+	--?[*T:control_module_number_known] -eq No -and [*T:data_module_number_known] -eq No -and [*T:countermeasure_number_known] -eq No|MustIDFirst
+	-->WhichSystemQuery|
+	--IWhich ; system/module?|q;WhatModule;Which system?[&QueryOutput]
+	--#leftsub|Destroy System/Module
+	--~FormattedAttribute|string;replaceall; ;_;[&WhatModule]
+	--#whisper|
+	--#leftsub|Disable System/Module
+	--=HackingDC|[*T:computer_tier] * 4 + 13 + [*T:security_upgrade] - [$KeyBonus]
+	--?[*T:root_access] -eq Yes|=HackingDC;10
+	--=ComputerRoll|1d20 + [*S:computers]
+	--?[$ComputerRoll] -ge [$HackingDC]|DisableSuccess
+	--+Failure|[i]After 1 action, you have [b]failed[/b] to disable the [&WhatModule] system with a Computers roll of [$ComputerRoll].[/i][br]
+	--^HackingMenu|
+	--X|
+	--:DisableSuccess|
+	--+Success|[i]After 1 action, you have [b]succeeded[/b] in disabling the [&WhatModule] system with a Computers roll of [$ComputerRoll].[/i][br]
+	--@setattr|_charid [*T:character_id] _[&FormattedAttribute]|Disabled _silent
+	--^HackingMenu|
+	--X|
+	
+--:Manipulate|
+	--?[*T:control_module_number_known] -eq No -and [*T:data_module_number_known] -eq No -and [*T:countermeasure_number_known] -eq No|MustIDFirst
+	-->WhichSystemQuery|
+	--IWhich ; system/module?|q;WhatModule;Which system?[&QueryOutput]
+	--#leftsub|Destroy System/Module
+	--~FormattedAttribute|string;replaceall; ;_;[&WhatModule]
+	--#whisper|
+	--#leftsub|Manipulate System/Module
+	--=HackingDC|[*T:computer_tier] * 4 + 13 + [*T:security_upgrade] - [$KeyBonus]
+	--?[*T:root_access] -eq Yes|=HackingDC;10
+	--=ComputerRoll|1d20 + [*S:computers]
+	--=Time|[*T:computer_tier]
+	--?[$ComputerRoll] -ge [$HackingDC]|ManipulateSuccess
+	--+Failure|[i]After [$Time.Raw] minutes, you have [b]failed[/b] to manipulate the [&WhatModule] system with a Computers roll of [$ComputerRoll].[/i][br]
+	--^HackingMenu|
+	--X|
+	--:ManipulateSuccess|
+	--+Success|[i]After [$Time.Raw] minutes, you have [b]succeeded[/b] in manipulating the [WhatModule] system with a Computers roll of [$ComputerRoll].[/i][br]
+	--^HackingMenu|
+	--X|
+	
+--:AccessRoot|
+	--#whisper|
+	--#leftsub|Gain Root Access
+	--=Time|[*T:computer_tier]
+	--=HackingDC|[*T:computer_tier] * 4 + 13 + [*T:security_upgrade] - [$KeyBonus]
+	--=ComputerRoll|1d20 + [*S:computers]
+	--?[$ComputerRoll] -ge [$HackingDC]|RootSuccess
+	--+Failure|[i]After [$Time.Raw] rounds, you have [b]failed[/b] to gain root access to the system with a Computers roll of [$ComputerRoll].[/i][br]
+	--@modattr|_charid [*T:character_id] _failed_access_attempts|+1 _silent
+	--?[*T:wipe_installed] -eq Yes -and [*T:failed_access_attempts] -ge 3|GettingWiped
+	--^HackingMenu|
+	--X|
+	--:RootSuccess|
+	--+Success|[i]After [$Time.Raw] rounds, you have [b]succeeded[/b] in gaining root access to the target system with a Computers roll of [$ComputerRoll].[/i][br]
+	--@setattr|_charid [*T:character_id] _root_access|Yes _silent
+	--^HackingMenu|
+	--X|
+	
+--:HackSystem|
+	--#leftsub|Hack System
+	--=HackingDC|[*T:computer_tier] * 4 + 13 + [*T:security_upgrade] - [$KeyBonus]
+	--=ComputerRoll|1d20 + [*S:computers]
+	--=Time|[*T:computer_tier]
+	--?[$ComputerRoll] -ge [$HackingDC]|HackSuccess
+	--+Failure|[i]After [$Time.Raw] rounds, you have [b]failed[/b] to gain access to the system.[/i][br]
+	--@modattr|_charid [*T:character_id] _failed_access_attempts|+1 _silent
+	--?[*T:wipe_installed] -eq Yes -and [*T:failed_access_attempts] -ge 3|GettingWiped
+	--X|
+	--^HackingMenu|
+	--:HackSuccess|
+	--+Success|[i]After [$Time.Raw] rounds, you have [b]succeeded[/b] in gaining access to the target system.[/i][br]
+	--@setattr|_charid [*T:character_id] _basic_system_access|Yes _silent
+	--^HackingMenu|
+	--X|
+	
+--:HackFirewall|
+	--?[*T:control_module_number_known] -eq No -and [*T:data_module_number_known] -eq No -and [*T:countermeasure_number_known] -eq No|MustIDFirst
+	-->WhichFirewallQuery|
+	--IWhich system/module ; firewall?|q;WhatFirewall;Which firewall?[&FirewallQueryOutput]
+	--#leftsub|Hack Firewall
+	--~FormattedAttribute|string;replaceall; ;_;[&WhatFirewall]
+	--#leftsub|Hack Firewall
+	--=HackingDC|[*T:computer_tier] * 4 + 15 + [*T:security_upgrade] - [$KeyBonus]
+	--=ComputerRoll|1d20 + [*S:computers]
+	--=Time|[*T:computer_tier]
+	--?[$ComputerRoll] -ge [$HackingDC]|HackFirewallSuccess
+	--+Failure|[i]After [$Time.Raw] rounds, you have [b]failed[/b] to overcome the [&WhatFirewall].[/i][br]
+	--X|
+	--^HackingMenu|
+	--:HackFirewallSuccess|
+	--+Success|[i]After [$Time.Raw] rounds, you have [b]succeeded[/b] in overcoming the [&WhatFirewall].[/i][br]
+	--@setattr|_charid [*T:character_id] _[&FormattedAttribute]|No _silent
+	--^HackingMenu|
+	--X|
+	
+--:GettingWiped|
+	--@setattr|_charid [*T:character_id] _wiped|Yes _silent
+	--Oh no!|[i]Your repeated failures have caused the data modules on this system to be wiped![/i][br]
+	--^HackingMenu|
+	--X|
+	
+--:Identify|
+	--#whisper|
+	--#leftsub|Inspect System
+	--:ReoutputID|
+	--+Tier:| [*T:computer_tier] 
+	--+UI:| [*T:computer_UI]
+	
+	--:ControlModules|
+	--?[*T:control_module_number_known] -eq Yes|DisplayControlModules|NoControlModules
+	--:DisplayControlModules|
+	--?[*T:control_module_number] -eq 0|NoControlModules
+	--=i|0
+	--:ControlLoop|
+	--=i|[$i] + 1
+	--&ModuleContents|control_module_[$i.Raw]
+	--&ModuleFirewall|control_module_[$i.Raw]_firewall
+	--+Control Module [$i.Total]:| [*T:[&ModuleContents]] [b]Firewalled:[/b] [*T:[&ModuleFirewall]]
+	--?[$i] -lt [*T:control_module_number]|ControlLoop|DataModules
+	--:NoControlModules|
+	--+None|There are 0 control modules known.
+	
+	--:DataModules|
+	--?[*T:data_module_number_known] -eq Yes|DisplayDataModules|NoDataModules
+	--:DisplayDataModules|
+	--?[*T:data_module_number] -eq 0|NoDataModules
+	--=j|0
+	--:DataLoop|
+	--=j|[$j] + 1
+	--&DataContents|data_module_[$j.Raw]
+	--&DataFirewall|data_module_[$j.Raw]_firewall
+	--+Data Module [$j.Total]:| [*T:[&DataContents]] [b]Firewalled:[/b] [*T:[&DataFirewall]]
+	--?[$j] -lt [*T:data_module_number]|DataLoop|SpellchipModules
+	--:NoDataModules|
+	--+None|There are 0 data modules known.
+	
+	--:SpellchipModules|
+	--?[*T:spellchip_module_number_known] -eq Yes|DisplaySpellchipModules|NoSpellchipModules
+	--:DisplaySpellchipModules|
+	--?[*T:spellchip_module_number] -eq 0|NoSpellchipModules
+	--=k|0
+	--:SpellchipLoop|
+	--=k|[$k] + 1
+	--&SpellchipContents|spellchip_module_[$j.Raw]
+	--&SpellchipFirewall|spellchip_module_[$j.Raw]_firewall
+	--+SpellchipModule [$k.Total]:| [*T:[&SpellchipContents]] [b]Firewalled:[/b] [*T:[&SpellchipFirewall]]
+	--?[$j] -lt [*T:spellchipa_module_number]|SpellchipLoop|CountermeasuresInstalled
+	--:NoSpellchipModules|
+	--+None|There are 0 spellchip modules known.
+	
+	--:CountermeasuresInstalled|
+	--?[*T:countermeasure_number_known] -eq Yes|DisplayCountermodules|NoCountermeasures
+	--:DisplayCountermodules|
+	--?[*T:countermeasure_number] -eq 0|NoCountermeasures
+	--+Alarm:| [*T:alarm] [b]Firewalled:[/b] [*T:alarm_firewall]
+	--+Feedback:| [*T:feedback] [b]Firewalled:[/b] [*T:feedback_firewall]
+	--+Shock Grid:| [*T:shock_grid] [*T:shock_grid_damage]d6 [b]Firewalled:[/b] [*T:shock_grid_firewall]
+	--+Wipe:| [*T:wipe_installed] [b]Firewalled:[/b] [*T:wipe_firewall]
+	--^IDButtons|
+	--X|
+	--:NoCountermeasures|
+	--+None|There are 0 countermeasure modules known.
+	--^IDButtons|
+	--X|
+	
+	--:IDButtons|
+		--+|[c][rbutton]Identify Control Modules::IdentifyControl[/rbutton] [rbutton]Identify Data Modules::IdentifyData[/rbutton] [rbutton]Identify Countermeasures::IdentifyCountermeasures[/rbutton] [rbutton]Identify Spellchips::IdentifySpellchip[/rbutton] [rbutton]Hacking Menu::HackingMenu[/rbutton][/c]
+		--X|
+		
+		--:IdentifyControl|
+			--#whisper|
+			--#leftsub|Inspect Control Modules
+			--=HackingDC|[*T:computer_tier] * 4 + 8 + [*T:security_upgrade]
+			--=ComputerRoll|1d20 + [*S:computers]
+			--?[$ComputerRoll] -ge [$HackingDC]|IdentifyControlSuccess
+			--+Failure|[i]After 1 round, you have [b]failed[/b] to identify any control modules.[/i][br]
+			--?[*T:wipe_installed] -eq Yes -and [*T:failed_access_attempts] -ge 3|GettingWiped
+			--^ReoutputID|
+			--X|
+			--:IdentifyControlSuccess|
+			--+Success|[i]After 1 round, you have [b]succeeded[/b] in identifying the system control modules.[/i][br]
+			--@setattr|_charid [*T:character_id] _control_module_number_known|Yes _silent
+			--^ReoutputID|
+			--X|
+			
+		--:IdentifyData|
+			--#whisper|
+			--#leftsub|Inspect Data Modules
+			--=HackingDC|[*T:computer_tier] * 4 + 8 + [*T:security_upgrade]
+			--=ComputerRoll|1d20 + [*S:computers]
+			--?[$ComputerRoll] -ge [$HackingDC]|IdentifyDataSuccess
+			--+Failure|[i]After 1 round, you have [b]failed[/b] to identify any data modules.[/i][br]
+			--^ReoutputID|
+			--X|
+			--:IdentifyDataSuccess|
+			--+Success|[i]After 1 round, you have [b]succeeded[/b] in identifying the system data modules.[/i][br]
+			--@setattr|_charid [*T:character_id] _data_module_number_known|Yes _silent
+			--^ReoutputID|
+			--X|
+			
+		--:IdentifyCountermeasures|
+			--#whisper|
+			--#leftsub|Inspect Countermeasures
+			--=HackingDC|[*T:computer_tier] * 4 + 8 + [*T:security_upgrade]
+			--=ComputerRoll|1d20 + [*S:computers]
+			--?[$ComputerRoll] -ge [$HackingDC]|IdentifyCountermeasuresSuccess
+			--+Failure|[i]After 1 round, you have [b]failed[/b] to identify any countermeasures.[/i][br]
+			--^ReoutputID|
+			--X|
+			--:IdentifyCountermeasuresSuccess|
+			--+Success|[i]After 1 round, you have [b]succeeded[/b] in identifying the countermeasures on this system.[/i][br]
+			--@setattr|_charid [*T:character_id] _countermeasure_number_known|Yes _silent
+			--^ReoutputID|
+			--X|		
+
+		--:IdentifySpellchip|
+			--#whisper|
+			--#leftsub|Inspect Spellchips
+			--=HackingDC|[*T:computer_tier] * 4 + 8 + [*T:security_upgrade]
+			--=ComputerRoll|1d20 + [*S:computers]
+			--?[$ComputerRoll] -ge [$HackingDC]|IdentifySpellchipSuccess
+			--+Failure|[i]After 1 round, you have [b]failed[/b] to identify any spellchip modules.[/i][br]
+			--^ReoutputID|
+			--X|
+			--:IdentifySpellchipSuccess|
+			--+Success|[i]After 1 round, you have [b]succeeded[/b] in identifying the system spellchip modules.[/i][br]
+			--@setattr|_charid [*T:character_id] _spellchip_module_number_known|Yes _silent
+			--^ReoutputID|
+			--X|
+			
+	--:MustIDFirst|
+		--+Systems Unknown|[i]You must identify some modules first![/i][br]
+		--^HackingMenu|
+		--X|
+		
+	--:HackFirewallFirst|
+		--+Firewall in the way|[i]You must hack through the firewall first![/i][br]
+		--^HackingMenu|
+		--X|
+		
+	--:WhichSystemQuery|
+		--&QueryOutput|
+		--?[*T:control_module_number] -eq 0 -or [*T:control_module_number_known] -eq No|GoToData
+		--=i|0
+		--:QueryControlLoop|
+		--=i|[$i] + 1
+		--&QueryOutput|+ |Control Module [$i.Raw]
+		--?[$i] -lt [*T:control_module_number]|QueryControlLoop
+		--:GoToData|
+		--?[*T:data_module_number] -eq 0 -or [*T:data_module_number_known] -eq No|GoToSpellchips
+		--=j|0
+		--:QueryDataLoop|
+		--=j|[$j] + 1
+		--&QueryOutput|+ |Data Module [$j.Raw]
+		--?[$j] -lt [*T:data_module_number]|QueryDataLoop
+		--:GoToSpellchips|
+		--?[*T:spellchip_module_number] -eq 0 -or [*T:spellchip_module_number_known] -eq No|GoToCountermeasures
+		--=k|0
+		--:QuerySpellChipLoop|
+		--=k|[$k] + 1
+		--&QueryOutput|+ |Spellchip Module [$k.Raw]
+		--?[$k] -lt [*T:data_module_number]|QuerySpellChipLoop
+		--:GoToCountermeasures|
+		--?[*T:countermeasure_number] -eq 0 -or [*T:countermeasure_number_known] -eq No|GoToEnd
+		--?[*T:alarm] -eq No|FeedbackOutput
+		--&QueryOutput|+ |Alarm
+		--:FeedbackOutput|
+		--?[*T:feedback] -eq No|ShockGridOutput
+		--&QueryOutput|+ |Feedback
+		--:ShockGridOutput|
+		--?[*T:shock_grid] -eq No|WipeOutput
+		--&QueryOutput|+ |Shock Grid
+		--:WipeOutput|
+		--?[*T:wipe_installed] -eq No|GoToEnd
+		--&QueryOutput|+ |Wipe
+		--:GoToEnd|
+		--<|
+		
+	--:WhichFirewallQuery|
+		--&FirewallQueryOutput|
+		--?[*T:control_module_number] -eq 0 -or [*T:control_module_number_known] -eq No|GoToFirewallData
+		--=i|0
+		--:QueryFirewallControlLoop|
+		--=i|[$i] + 1
+		--?[*T:control_module_[$i.Total]_firewall -eq No|SkipControlFirewallOutput
+		--&FirewallQueryOutput|+ |Control Module [$i.Raw] Firewall
+		--:SkipControlFirewallOutput|
+		--?[$i] -lt [*T:control_module_number]|QueryFirewallControlLoop
+		--:GoToFirewallData|
+		--?[*T:data_module_number] -eq 0 -or [*T:data_module_number_known] -eq No|GoToFirewallSpellchip
+		--=j|0
+		--:QueryFirewallDataLoop|
+		--=j|[$j] + 1
+		--?[*T:data_module_[$i.Total]_firewall -eq No|SkipDataFirewallOutput
+		--&FirewallQueryOutput|+ |Data Module [$j.Raw] Firewall
+		--:SkipDataFirewallOutput|
+		--?[$j] -lt [*T:data_module_number]|QueryFirewallDataLoop
+		--:GoToFirewallSpellchip|
+		--?[*T:spellchip_module_number] -eq 0 -or [*T:spellchip_module_number_known] -eq No|GoToFirewallCountermeasures
+		--=k|0
+		--:QueryFirewallSpellchipLoop|
+		--=k|[$k] + 1
+		--?[*T:spellchip_module_[$i.Total]_firewall -eq No|SkipSpellchipFirewallOutput
+		--&FirewallQueryOutput|+ |Spellchip Module [$j.Raw] Firewall
+		--:SkipSpellchipFirewallOutput|
+		--?[$j] -lt [*T:spellchip_module_number]|QueryFirewallSpellchipLoop
+		--:GoToFirewallCountermeasures|
+		--?[*T:countermeasure_number] -eq 0 -or [*T:countermeasure_number_known] -eq No|GoToFirewallEnd
+		--?[*T:alarm_firewall] -eq No|FeedbackFirewallOutput
+		--&FirewallQueryOutput|+ |Alarm Firewall
+		--:FeedbackFirewallOutput|
+		--?[*T:feedback_firewall] -eq No|ShockGridFirewallOutput
+		--&FirewallQueryOutput|+ |Feedback Firewall
+		--:ShockGridFirewallOutput|
+		--?[*T:shock_grid_firewall] -eq No|WipeFirewallOutput
+		--&FirewallQueryOutput|+ |Shock Grid Firewall
+		--:WipeFirewallOutput|
+		--?[*T:wipe_firewall] -eq No|GoToFirewallEnd
+		--&FirewallQueryOutput|+ |Wipe Firewall
+		--:GoToFirewallEnd|
+		--<|
+}}

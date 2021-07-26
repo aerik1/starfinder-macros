@@ -1,0 +1,62 @@
+!scriptcard {{
++++Starfinder+++
+--#whisper|self
+--#emoteState|hidden
+--#sourceToken|@{selected|token_id}
+--Lsettings|[*S:character_name]
+--?[*S:sheet_type] -eq npc|>NPCSettings
+--#title|[*S:t-name] Skill Check
+--#leftsub|Which skill?
+  
+--~|array;define;SkillNames;Acrobatics;Athletics;Bluff;Computers;Culture;Diplomacy;Disguise;Engineering;Intimidate;Life Science;Medicine;Mysticism;Perception;Physical Science;Piloting;Profession;Sense Motive;Sleight of Hand;Stealth;Survival
+  
+--~SkillName|array;getcurrent;SkillNames
+--:LoopSkillNames|
+--?"[&SkillName]" -inc Profession|CheckProfession
+--~RankCheck|string;replaceall; ;_;[&SkillName]
+--?[*S:[&RankCheck]_ranks] -eq 0|NoRanks
+--&Output|+ [rbutton][&SkillName]::SkillRoll;[&SkillName][/rbutton]
+--:NoRanks|
+--:ProfessionDone|
+--~SkillName|array;getnext;SkillNames
+--?"[&SkillName]" -inc Error|>Output
+-->LoopSkillNames|
+
+--:CheckProfession|
+--Rfirst|[*S:character_id];repeating_profession
+--?"[*R:name]" -inc Loaded|ProfessionDone
+--:ProfessionOutput|
+--&Output|+ [rbutton][*R:name]::ProfessionRoll;[*R:name][/rbutton]
+--Rnext|
+--?"[*R:name]" -inc Loaded|ProfessionDone|ProfessionOutput
+--<|
+
+--:Output|
+--+|[c][&Output][/c]
+--+|[c][b]Special Skill Checks:[/b][/c]
+--+|[c][button]Identify Creature::~GenericMacro|IdentifyCreature[/button] [button]Hacking::~GenericMacro|Hacking[/button] [/c]
+--X|
+
+  --:SkillRoll|
+  --#title|[*S:t-name] - [&reentryval]
+  --#leftsub|Skill Check
+  --~SkillNoSpace|string;replace; ;_;[&reentryval]
+  --=RollMod|[*S:[&SkillNoSpace]]
+  --=Roll|1d20 [Base] + [$RollMod] [Modifier]
+  --+|[c][i][b][*S:t-name][/b] rolls a [b][&reentryval][/b] check of [$Roll]. [/i][/c]
+  --X|
+  
+  --:ProfessionRoll|
+  --#title|[*S:t-name] - [&reentryval]
+  --#leftsub|Skill Check
+  --Rfind|[*S:character_id];[&reentryval];repeating_profession;name
+  --=RollMod|[*R:ranks] + [*R:class_skill] + [*R:ability]
+  --=Roll|1d20 [Base] + [$RollMod] [Modifier]
+  --+|[c][i][b][*S:t-name][/b] rolls a [b][&reentryval][/b] check of [$Roll]. [/i][/c] 
+  --X|
+
+--:NPCSettings|
+--Lsettings|npcsettings
+--#whisper|GM
+--<|
+}}

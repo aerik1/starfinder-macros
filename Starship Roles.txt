@@ -1,0 +1,80 @@
+!scriptcards {{ 
++++Starfinder+++
+--#emoteState|Hidden
+-->SetSpeakingAsSource|
+--Lsettings|[*S:character_name]
+--#whisper|self
+
+--#title|[*S:character_name] - Starship Position
+--#leftsub|What position are you this turn?
+
+--+|[c][rbutton]Captain::Captain[/rbutton] [rbutton]Pilot::Pilot[/rbutton] [rbutton]Science Officer::ScienceOfficer[/rbutton] [rbutton]Engineer::Engineer[/rbutton] [rbutton]Gunner::Gunner[/rbutton] [rbutton]Chief Mate::ChiefMate[/rbutton] [rbutton]Magic Officer::MagicOfficer[/rbutton] [rbutton]Open Crew::OpenCrew[/rbutton][/c]
+--X|
+
+--:Captain|
+	--#title|Captain [*S:character_name]
+	--#leftsub|What are your orders, Captain?
+	--&CaptainOutput|[button]Demand::~StarshipMacros|Demand[/button] [button]Encourage::~StarshipMacros|Encourage[/button] [button]Taunt (P)::~StarshipMacros|Taunt[/button] 
+	--?[*S:character_level] -ge 6|&CaptainOutput;+[sheetbutton]Orders ::StarshipMacros::Orders[/sheetbutton] 
+	--?[*S:character_level] -ge 12|&CaptainOutput;+[sheetbutton]Moving Speech::~StarshipMacros::MovingSpeech[/sheetbutton] 
+	--+|[c][&CaptainOutput][/c]
+	--X|
+
+--:Pilot|
+	--#title|Pilot [*S:character_name]
+	--#leftsub|Second star to the right, Pilot.	--&PilotOutput|[button]Fly::~StarshipMacros|Fly[/button] [button]Maneuver::~StarshipMacros|Maneuver[/button] [button]Stunt (P)::~StarshipMacros|Stunt[/button] 
+	--?[*S:piloting_ranks] -ge 6|&PilotOutput;+[sheetbutton]Full Power (P)::StarshipMacros::FullPower[/sheetbutton] 
+	--?[*S:piloting_ranks] -ge 12|&PilotOutput;+[sheetbutton]Audacious Gambit::StarshipMacros::AudaciousGambit[/sheetbutton]
+	--+|[c][&PilotOutput][/c]
+	--X|
+	
+--:ScienceOfficer|
+	--#title|Science Officer [*S:character_name]
+	--#leftsub|Scanners to active, Science Officer.	--&ScienceOutput|[button]Balance::~StarshipMacros|Balance[/button] [button]Scan::~StarshipMacros|Scan[/button] [button]Target System (P)::~StarshipMacros|TargetSystem[/button] 
+	--?[*S:computers_ranks] -ge 6|&ScienceOutput;+[sheetbutton]Lock On (P)::StarshipMacros::LockOn[/sheetbutton] 
+	--?[*S:computers_ranks] -ge 12|&ScienceOutput;+[sheetbutton]Improve Countermeasures::StarshipMacros::ImproveCountermeasures[/sheetbutton]
+	--+|[c][&ScienceOutput][/c]
+	--X|
+	
+--:Engineer|
+	--#title|Engineer [*S:character_name]
+	--#leftsub|What are you fixing, Engineer?
+	--&EngineerOutput|[button]Divert::~StarshipMacros|Divert[/button] [button]Hold It Together::~StarshipMacros|HoldItTogether[/button] [button]Patch::~StarshipMacros|Patch[/button] 
+	--?[*S:engineering_ranks] -ge 6|&EngineerOutput;+[sheetbutton]Overpower (P)::StarshipMacros::Overpower[/sheetbutton] 
+	--?[*S:engineering_ranks] -ge 12|&EngineerOutput;+[sheetbutton]Quick Fix::StarshipMacros::QuickFix[/sheetbutton]
+    --+|[c][&EngineerOutput][/c]
+	--X|	
+
+--:Gunner|
+	--#title|Gunner [*S:character_name]
+	--#leftsub|Target that ship, Gunner!
+	--&GunnerOutput|[button]Fire At Will! (P)::~StarshipMacros|FireAtWill[/button] [button]Shoot::~StarshipMacros|Shoot[/button] 
+	--?[*S:character_level] -ge 6|&GunnerOutput;+[sheetbutton]Broadside (P)::StarshipMacros::Broadside[/sheetbutton] 
+	--?[*S:character_level] -ge 12|&GunnerOutput;+[sheetbutton]Precise Targeting::~StarshipMacros::PreciseTargeting[/sheetbutton]
+    --+|[c][&GunnerOutput][/c]
+	--X|
+	
+--:ChiefMate|
+	--#title|Chief Mate [*S:character_name]
+	--#leftsub|Help me out, Chief!
+	--&ChiefOutput|[button]Hard Turn (P)::~StarshipMacros|HardTurn[/button] [button]Panel Access::~StarshipMacros|PanelAccess[/button] [button]Manual Realignment::~StarshipMacros|ManualRealignment[/button] 
+	--?[*S:acrobatics_ranks] -ge 6 -or [*S:athletics_ranks] -ge 6|&ChiefOutput;+[sheetbutton]Targeting Aid (P)::StarshipMacros::TargetingAid[/sheetbutton] 
+	--?[*S:acrobatics_ranks] -ge 12 -or [*S:athletics_ranks] -ge 12|&ChiefOutput;+[sheetbutton]Maximize Speed::~StarshipMacros::MaximizeSpeed[/sheetbutton]
+    --+|[c][&ChiefOutput][/c]
+	--X|
+
+--:MagicOfficer|
+	--#title|Magic Officer [*S:character_name]
+	--#leftsub|Use your powers!
+	--&MagicOutput|[button]Eldritch Shot (P)::~StarshipMacros|EldritchShot[/button] [button]Precognition::~StarshipMacros|Precognition[/button] [button]Scrying::~StarshipMacros|Scrying[/button] 
+	--?[*S:mysticism_ranks] -ge 6|&MagicOutput;+[sheetbutton]Mystic Haze (P) (P)::StarshipMacros::MysticHaze[/sheetbutton] 
+	--?[*S:mysticism_ranks] -ge 12|&MagicOutput;+[sheetbutton]Psychic Currents::~StarshipMacros::PsychicCurrents[/sheetbutton]
+    --+|[c][&MagicOutput][/c]
+	--X|
+
+--:OpenCrew|
+	--#title|Open Crew [*S:character_name]
+	--#leftsub|You don't have a title, but you can still do something!
+	--+|[c][button]Erratic Maneuvering::~StarshipMacros|ErraticManeuvering[/button] [button]Feign Disaster::~StarshipMacros|FeignDisaster[/button] [button]Prioritize Calulation::~StarshipMacros|PrioritizeCalulation[/button] [button]Range Finding::~StarshipMacros|RangeFinding[/button] [button]Ready Weapon System::~StarshipMacros|ReadyWeaponSystem[/button][/c]
+	--X|
+}}

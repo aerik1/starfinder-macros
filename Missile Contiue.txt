@@ -1,0 +1,70 @@
+!scriptcard {{
+--#sourceToken|@{selected|token_id}
+--#targetToken|@{target|token_id}
+--#emoteState|hidden
+--#title|Missile Tracking
+--#buttonFontSize|medium
+
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+
+--=GunnersBAB|[*[&SpeakingAs]:bab]
+--=GunnersPilotingRanks|[*[&SpeakingAs]:piloting_ranks]
+--~HigherBonus|math;max;[$GunnersBAB];[$GunnersPilotingRanks]
+--IWhich ship was the projectile ; fired from?|t;MissileOrigination;Which ship was the projectile fired from?
+-->GetWeaponInfo|
+
+--:BeginAttack|
+--IWhat tracking weapon was ; fired?|q;WeaponName;What tracking weapon was fired?[&QueryWeaponOutput]|Other
+--Rfind|[*[&MissileOrigination]:character_id];[&WeaponName];repeating_attack;name
+
+--:VariableRolls|
+--=i|0
+--=MissileSpeed|[*R:description]
+--=GunneryRoll|1d20 [Base] + [$HigherBonus] [Skill] + [*[&SpeakingAs]:dexterity_mod] [DEX] - [$Countermeasures] [Enemy Countermeasures]
+--=WhatToHit|[*T:tl]
+--=DamageRoll|[*R:damage_dice]
+--=CritDamage|[$DamageRoll] * 2
+
+--IWhich arc on the target are you ; firing at?|q;TargetArc;Which arc on the target are you firing at?|Forward|Aft|Port|Starboard
+
+--+Tracking|The missile continues to track [*T:t-name] with a [$GunneryRoll].
+
+--:HitDetermination|
+--?[$GunneryRoll] -ge [$WhatToHit]|Hit
+--:Miss|
+	--+Missed!|[i]The projectile has [b]missed[/b] the target and explodes harmlessly.[/i]
+	--X|
+--:Hit|
+	--~GetDistance|euclideanlong;[*S:t-id];[*T:t-id]
+	--?[$MissileSpeed] -lt [$GetDistance]|NotThereYet
+	--+Hit!|[i]The [*R:name] missile [b]deals [$DamageRoll][/b] to the [&TargetArc] arc of [*T:character_name].[/i].
+	-->SetDamage|[$DamageRoll];No
+
+	--X|
+
+--:GetWeaponInfo|
+	--Rfirst|[*[&MissileOrigination]:character_id];repeating_attack
+	--:WeaponLoop|
+	--?"[*R:name]" -inc Loaded|WeaponDone
+	--?[*R:type] -ne tracking|NoTracking
+	--&QueryWeaponOutput|+|[*R:name]
+	--:NoTracking|
+	--Rnext|
+	--Rnext|
+	--^WeaponLoop|
+	--:WeaponDone|
+	--<|
+
+--:SetDamage|
+	--:NumberAssign|
+	--=i|[$i]+1
+	--?[*T:damage[$i.Total]_to_[&TargetArc]] -gt 0|NumberAssign|NumberAssignDone
+	--:NumberAssignDone|
+	--@setattr|_charid [*T:character_id] _damage[$i.Total]_to_[&TargetArc]|[%1%] _damage[$i.Total]_to_[&TargetArc]_crit|[%2%] _silent
+	--<|
+	
+--:NotThereYet|
+	--+On the way!|[i]Your [*R:name] has locked onto [*T:character_name] and moves toward it at a speed of [$MissileSpeed.Raw].[/i]
+	--?[$AttackNumber] -eq 1|SecondAttack
+	--X|
+}}

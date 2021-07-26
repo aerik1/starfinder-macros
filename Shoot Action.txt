@@ -1,0 +1,259 @@
+!scriptcard {{
++++Starfinder+++
+--#sourceToken|@{selected|token_id}
+--#targetToken|@{target|token_id}
+--#emoteState|hidden
+--#title|[*S:character_name] - Shoot
+--#buttonFontSize|medium
+
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+
+--=GunnersBAB|[*[&SpeakingAs]:bab]
+--=GunnersPilotingRanks|[*[&SpeakingAs]:piloting_ranks]
+--~HigherBonus|math;max;[$GunnersBAB];[$GunnersPilotingRanks]
+--=RangePenalty|0
+--=CaptainBonus|0
+-->AskComputerBonus|[*S:character_id]
+--?[*S:demand_on] -eq Yes -and [*S:demand_target] -eq Gunner|>SetCaptainBonus;4
+--?[*S:encourage_on] -eq Yes -and [*S:encourage_target] -eq Gunner|>SetCaptainBonus;2
+-->GetWeaponInfo|
+
+--IWhat weapon are you ; firing?|q;WeaponUsed;What weapon are you firing?[&QueryWeaponOutput]
+--~WeaponName|string;before;-;[&WeaponUsed]
+--Rfind|[*S:character_id];[&WeaponName];repeating_attack;name
+--?[*S:[*R:arc]_weapons_status] -inc Wrecked|>SystemDown
+
+--:VariableRolls|
+--=i|0
+--=MissileSpeed|[*R:description]
+--=GunneryRoll|1d20 [Base] + [$HigherBonus] [Skill] + [*[&SpeakingAs]:dexterity_mod] [DEX] + [$ComputerBonus] [Computer] - [$RangePenalty] [Range] + [$CaptainBonus] [Captain Bonus] + [*S:[*R:arc]_weapons_status] [Weapons Status] + [*S:power_core_status] [Power Core Status]
+--?[*R:type] -eq tracking|=WhatToHit;[*T:tl]|=WhatToHit;[*T:ac]
+--=DamageRoll|[*R:damage_dice]
+--?[*S:weapon_divert] -eq Yes|=DamageRoll;[$DamageRoll.RollText]r<2
+--=CritDamage|[$DamageRoll] * 2
+
+--C[*R:special]|Array:>ArrayFire|Broad:>BroadArc|EMP:>EMPWeapon|Line:>LineWeapon|Point:>PointWeapon
+--IWhich arc on the target are you ; firing at?|q;TargetArc;Which arc on the target are you firing at?|Forward|Aft|Port|Starboard
+
+--+Fire!|[*[&SpeakingAs]:character_name] takes aim and fires at [*T:t-name] with a [$GunneryRoll].
+
+--:HitDetermination|
+--?[*T:target_lockon] -eq Yes -and [$GunneryRoll.Base] -eq 19|CriticalHit
+--?[$GunneryRoll.Base] -eq 20|CriticalHit
+--?[$GunneryRoll] -ge [$WhatToHit]|Hit
+--:Miss|
+	--+Missed!|[i]You have [b]missed[/b] your target.[/i]
+	--X|
+	
+--:CriticalHit|
+	--?[*R:type] -eq tracking -and "[*R:name]" -ne "Light Torpedo Launcher"|>ReduceAmmo
+	--?[*R:type] -eq tracking|>TrackingShot;Yes
+	--+Critical Hit!|[i]Your excellent shot deals [$CritDamage] to the [&TargetArc] arc of [*T:character_name].[/i]
+	--?[*R:special] -inc Irradiate|Irradiate
+	-->SetDamage|[$CritDamage];Yes
+	--X|
+
+--:Hit|
+	--?[*R:type] -eq tracking -and "[*R:name]" -ne "Light Torpedo Launcher"|>ReduceAmmo
+	--?[*R:type] -eq tracking|>TrackingShot;No
+	--+Hit!|[i]Your [*R:name] shot [b]deals [$DamageRoll][/b] to the [&TargetArc] arc of [*T:character_name].[/i].
+	--?[*R:special] -inc Irradiate|Irradiate
+	-->SetDamage|[$DamageRoll];No
+	--X|
+
+--:SetCaptainBonus|
+	--=CaptainBonus|[%1%]
+	--?[$CaptainBonus] -eq 4|WipeDemand
+	--@setattr|_charid [*S:character_id] _encourage_on|No _encourage_target|None _silent
+	--<|
+	--:WipeDemand|
+	--@setattr|_charid [*S:character_id] _demand_on|No _demand_target|None _silent
+	--<|
+	
+--:GetWeaponInfo|
+	--Rfirst|[*S:character_id];repeating_attack
+	--:WeaponLoop|
+	--?"[*R:name]" -inc Loaded|WeaponDone
+	--&QueryWeaponOutput|+|[*R:name]-[*R:arc] arc
+	--Rnext|
+	--Rnext|
+	--^WeaponLoop|
+	--:WeaponDone|
+	--<|
+
+--:SetDamage|
+	--:NumberAssign|
+	--=i|[$i]+1
+	--?[*T:damage[$i.Total]_to_[&TargetArc]] -gt 0|NumberAssign|NumberAssignDone
+	--:NumberAssignDone|
+	--@setattr|_charid [*T:character_id] _damage[$i.Total]_to_[&TargetArc]|[%1%] _damage[$i.Total]_to_[&TargetArc]_crit|[%2%] _silent
+	--<|
+	
+--:SetDamageAOE|
+	--:NumberAssignAOE|
+	--=k|[$k]+1
+	--?[*T:damage[$k.Total]_to_[&TargetArc]] -gt 0|NumberAssignAOE|NumberAssignDoneAOE
+	--:NumberAssignDoneAOE|
+	--@setattr|_charid [*T:character_id] _damage[$k.Total]_to_[&TargetArc[$j.Total]]|[$DamageRoll] _damage[$j.Total]_to_[&TargetArc]_crit|No _silent
+	--<|
+	
+--:TrackingShot|
+	--~GetDistance|euclideanlong;[*S:t-id];[*T:t-id]
+	--?[$MissileSpeed] -lt [$GetDistance]|NotThereYet
+	--<|
+	--:NotThereYet|
+	--+On the way!|[i]Your [*R:name] has locked onto [*T:character_name] and moves toward it at a speed of [$MissileSpeed.Raw].[/i]
+	--@forselected|Spawn _name|Missile _offset|0,-1 _side|3
+	--X|
+	
+--:ReduceAmmo|
+	--?[*S:repeating_attack_[*R:id]_ammo] -eq 0|NoAmmoLeft
+	--@modbattr|_silent _charid [*S:character_id] _repeating_attack_[*R:id]_ammo|-1
+	--<|
+	--:NoAmmoLeft|
+	--+No ammo left!|[i]Your [*R:name] is out of ammo[/i]. 
+	--X|
+	
+--:ArrayFire|
+	--=FiringRange|[*R:range]
+	--?"[*S:eldritch_shot]" -eq "[*R:name]"|=FiringRange;[$FiringRange] + 5
+	--?"[*S:eldritch_shot]" -eq "[*R:name]"|>ClearEldritchShot
+	--=ArcRange|[$FiringRange] + 2 * 0.875
+	--&FiringArc|[*R:arc]
+	--?[&FiringArc] -eq Turret|>AskArc
+	--C[&FiringArc]|Forward:>SetFiringAngle;0;60|Aft:>SetFiringAngle;180;60|Port:>SetFiringAngle;270;120|Starboard:>SetFiringAngle;90;120
+	--@weapon-arc|_add [$FiringAngle]|[$FiringAngleWidth] [$ArcRange]u 
+	--IHow many ;targets in the arc?|q;VictimCount;How many targets?|1|2|3|4|5|6|7|8|9|10
+	--@weapon-arc|_clear
+	--=VictimCount|[&VictimCount]
+	--=i|0
+	--:ArrayTargetSelection|
+		--=i|[$i] + 1
+		--ISelect your next ; target|t;Victim[$i.Total];Choose next target
+		--IWhich arc on the target are you ; firing at?|q;TargetArc[$i.Total];Which arc on the target are you firing at?|Forward|Aft|Port|Starboard
+		--?[$i] -ne [$VictimCount]|ArrayTargetSelection|ArrayTargetsDone
+	--:ArrayTargetsDone|
+		--=GunneryRoll|1d20 [Base] + [$HigherBonus] [Skill] + [*[&SpeakingAs]:dexterity_mod] [DEX] + [$ComputerBonus] [Computer] - [$RangePenalty] [Range] + [$CaptainBonus] [Captain Bonus] - 4 [Array Weapon] + [*S:[*R:arc]_weapons_status] [Weapons Status] + [*S:power_core_status] [Power Core Status]
+		--+Attack|[*S:t-name] rolls a [$GunneryRoll] attacking everyone in range in the [$TargetArc] arc. 
+		--+|[c][b]Results:[/b][/c]
+		--=j|0
+	--:ApplyArrayDamage|
+		--=j|[$j] + 1
+		--#targetToken|[&Victim[$j.Total]]
+		--?[$GunneryRoll] -ge [$WhatToHit]|ArrayHit|ArrayMiss
+	--:ArrayHit|
+		--+Hit!|[i][*S:t-name] deals [b][$DamageRoll] damage[/b] with their [*R:name] attack against [*T:t-name]! [/i]
+		-->SetDamageAOE|
+		--?[$j] -eq [$VictimCount]|ArrayDone|ApplyArrayDamage
+	--:ArrayMiss|
+		--+Miss|[i][*S:character_name] [b]misses[/b] with their [*R:name] attack against [*T:t-name]![/i]
+		--?[$j] -eq [$VictimCount]|ArrayDone|ApplyArrayDamage
+	--:ArrayDone|
+	--X|
+	--:SetFiringAngle|
+		--=FiringAngle|[%1%]
+		--=FiringAngleWidth|[%2%]
+		--<|
+	--:AskArc|
+		--IWhat arc are you ; firing from?|q;FiringArc;What arc are you firing from?|Forward|Aft|Port|Starboard
+		--<|
+		
+--:BroadArc|
+	--IAre you using this weapon in an ; adjacent arc?|q;AdjacentArc;Are you using this weapon in an adjacent arc?|No|Yes
+	--?[&AdjacentArc] -eq Yes|BroadArcFire
+	--<|
+	--:BroadArcFire|
+	--=GunneryRoll|1d20 [Base] + [$HigherBonus] [Skill] + [*[&SpeakingAs]:dexterity_mod] [DEX] + [$ComputerBonus] [Computer] - [$RangePenalty] [Range] + [$CaptainBonus] [Captain Bonus] - 2 [Broad Arc Fire] + [*S:[*R:arc]_weapons_status] [Weapons Status] + [*S:power_core_status] [Power Core Status]
+	--<|
+	
+--:EMPWeapon|
+	--?[$GunneryRoll] -ge [$WhatToHit]|EMPHit
+	--:EMPMiss|
+		--+Missed!|[i]You have [b]missed[/b] your target.[/i]
+		--X|	
+	--:EMPHit|
+		--?[*T:[&TargetArc]_shields] -gt 0|EMPShields
+		--=GlitchTime|1d4
+		--=GlitchSystem|[T#CriticalDamageEffect]
+		--~CritSystemAttribute|string;replace; ;_;[$SystemCrit.TableEntryText]
+		--+Hit![i]The [$GlitchSystem.TableEntryText] system on [*T:character_name] will be [b]glitching[/b] for [$GlitchTime] rounds![/i]
+		--@setattr|_charid [*T:character_id] _[&CritSystemAttribute]_status|-2 _silent
+		--X|
+	--:EMPShields|
+		--+Shielded!|[i][*T:character_name]'s shields prevent damage from the EMP weapon.[/i]
+		--X|
+		
+--:Irradiate|
+	--~IrradiateLevel|string;after;-;[*R:special]
+	--=IrradiateTime|1d4
+	--+Radiation Warning!|[i]The crew on [*T:character_name] are also subject to [&IrradiateLevel] levels of radiation for [$IrradiateTime] rounds![/i]
+	--<|
+	
+--:LineWeapon|
+	--=FiringRange|[*R:range]
+	--?"[*S:eldritch_shot]" -eq "[*R:name]"|=FiringRange;[$FiringRange] + 5
+	--?"[*S:eldritch_shot]" -eq "[*R:name]"|>ClearEldritchShot
+	--=ArcRange|[$FiringRange] + 2 * 0.875
+	--IWhat is your ; firing angle?|q;FiringAngle;What is your firing angle?|0|60|120|180|240|300
+	--=FiringAngle|[&FiringAngle]
+	--@weapon-arc|_add [&FiringAngle]|10 [$ArcRange]u 
+	--IHow many ;targets in the arc?|q;VictimCount;How many targets?|1|2|3|4|5|6|7|8|9|10
+	--@weapon-arc|_clear
+	--=VictimCount|[&VictimCount]
+	--=i|0
+	--:LineFireTargetSelection|
+		--=i|[$i] + 1
+		--ISelect your next ;target|t;Victim[$i.Total];Choose next target.
+		--IWhich arc on the target are you ; firing at?|q;TargetArc[$i.Total];Which arc on the target are you firing at?|Forward|Aft|Port|Starboard
+		--?[$i] -ne [$VictimCount]|LineFireTargetSelection|LineFireTargetsDone
+	--:LineFireTargetsDone|
+	--=GunneryRoll|1d20 [Base] + [$HigherBonus] [Skill] + [*[&SpeakingAs]:dexterity_mod] [DEX] + [$ComputerBonus] [Computer] + [$CaptainBonus] [Captain Bonus] + [*S:[*R:arc]_weapons_status] [Weapons Status] + [*S:power_core_status] [Power Core Status]
+	--+Attack|[*S:t-name] rolls a [$GunneryRoll] hitting everyone in a [*R:range]' line in front of them. 
+	--+|[c][b]Results:[/b][/c]
+	--=j|0
+	--:ApplyLineFireDamage|
+		--=j|[$j] + 1
+		--#targetToken|[&Victim[$j.Total]]
+		--?[$GunneryRoll] -ge [$WhatToHit]|LineFireHit|LineFireMiss
+	--:LineFireHit|
+		--=TargetDamageToHull|[$DamageRoll] - [*T:[$TargetArc]_shields]
+		--?[$TargetDamageToHull] -lt [*T:damage_threshold]|LineStopped
+		--+Hit!|[i][*S:t-name] deals [b][$DamageRoll] [*R:type] damage[/b] with their [*R:name] Line attack against [*T:t-name]! [/i]
+		-->SetDamageAOE|
+		--?[$j] -eq [$VictimCount]|LineFireDone|ApplyLineFireDamage
+	--:LineFireMiss|
+		--+Miss|[i][*S:character_name] [b]misses[/b] with their [*R:name] Line attack against [*T:t-name]![/i]
+		--?[$j] -eq [$VictimCount]|LineFireDone|ApplyLineFireDamage
+	--:LineStopped|
+		--+Line stopped|[i]The damage threshold on [*T:character_name] is high enough to stop the line attack.[/i]
+		--@setattr|_charid [*T:character_id] _[&TargetArc]_shields|0 _silent
+		--X|
+	--:LineFireDone|
+	--X|
+	
+--:PointWeapon|
+	--IIs this attack being used to shoot down a ; tracking weapon?|q;PointShot;Is this attack being used to shoot down a tracking weapon?|No|Yes
+	--?[&PointShot] -eq Yes|PointDefense
+	--<|
+	--:PointDefense|
+		--~PointDefense|string;after;+;[*R:special]
+		--=PointDefense|[&PointDefense]
+		--=GunneryRoll|1d20 [Base] + [$PointDefense] [Point Defense] + [*S:[*R:arc]_weapons_status] [Weapons Status] + [*S:power_core_status] [Power Core Status]
+		--IWhat is the speed of the ; projectile?|q;IncomingSpeed;What is the speed of the projectile?
+		--=IncomingSpeed|[&IncomingSpeed]
+		--=ProjectileDC|10 + [$IncomingSpeed]
+		--?[$GunneryRoll] -ge [$ProjectileDC]|TakeDown
+		--+Miss|[i]You have [b]failed to shoot down[/b] the incoming projectile.[/i]
+		--X|
+		--:TakeDown|
+			--+Defended!|[i]You have [b]successfully shot down[/b] the incoming projectile![/i]
+			--X|
+			
+--:ClearEldritchShot|
+	--@setattr|_charid [*S:character_id] _eldritch_shot|None _silent
+	--<|
+			
+--:SystemDown|
+	--+Wrecked|[i]This system is [b]inoperable[/b]. It can only be patched or held together by an Engineer.[/i]
+	--X|
+}}

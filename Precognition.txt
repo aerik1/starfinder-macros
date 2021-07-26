@@ -1,0 +1,48 @@
+!scriptcard {{
++++Starfinder+++
+--#sourceToken|@{selected|token_id}
+--#emoteState|hidden
+--#title|[*S:character_name] - Precognition
+--#buttonFontSize|medium
+
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+
+--=CaptainBonus|0
+-->AskComputerBonus|[*S:character_id]
+-->CheckArcaneLab|
+--?[*S:demand_on] -eq Yes -and [*S:demand_target] -eq Gunner|>SetCaptainBonus;4
+--?[*S:encourage_on] -eq Yes -and [*S:encourage_target] -eq Gunner|>SetCaptainBonus;2
+--=PrecogDC|1.5 * [*S:ship_tier] {FLOOR} + 10 
+--=MysticismRoll|1d20 + [*[&SpeakingAs]:Mysticism] + [$CaptainBonus] [Captain Bonus] + [$ComputerBonus] [Computer Bonus] + [$LabBonus] [Lab Bonus]
+--?[$MysticismRoll] -ge [$PrecogDC]|Success|Failure
+
+--:Success|
+	--+Success|[i]Your pilot will have a [b]+2 bonus[/b] to determine piloting order with a roll of [$MysticismRoll].[/i]
+	--X|
+
+--:Failure|
+	--+Failed|[i]You [b]fail to aid your pilot[/b] this round with a roll of [$MysticismRoll]![/i]
+	--X|
+	
+--:SetCaptainBonus|
+	--=CaptainBonus|[%1%]
+	--?[$CaptainBonus] -eq 4|WipeDemand
+	--@setattr|_charid [*S:character_id] _encourage_on|No _encourage_target|None _silent
+	--<|
+	--:WipeDemand|
+	--@setattr|_charid [*S:character_id] _demand_on|No _demand_target|None _silent
+	--<|
+	
+--:CheckArcaneLab|
+	--=LabBonus|0
+	--Rfirst|[*S:character_id];repeating_system
+	--:SystemLoop|
+	--?"[*R:name]" -inc Loaded|SystemDone
+	--?"[*R:name]" -inc "Arcane Laboratory"|SystemFound
+	--Rnext|
+	--^SystemLoop|
+	--:SystemFound|
+	--=LabBonus|2
+	--:SystemDone|
+	--<| 
+}}

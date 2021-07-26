@@ -1,0 +1,258 @@
+!scriptcard {{ 
+  --#whisper|self
+  --#emoteState|hidden
+  --#sourceToken|@{selected|token_id}
+  --Lsettings|[*S:character_name]
+  --#title|[*S:t-name] - Combat Maneuvers
+  --#leftsub|Which maneuver are you attempting?
+  
+  --~|array;define;ManeuverNames;Bull Rush;Covering Fire;Demoralize;Dirty Trick;Disarm;Escape;Feint;Grapple;Harrying Fire;Reposition;Sunder;Trip;Tumble Through
+  
+  --~ManeuverName|array;getcurrent;ManeuverNames
+  --:LoopManeuverNames|
+  --~ManeuverMacro|string;replace; ;;[&ManeuverName]
+  --&Output|+ [rbutton][&ManeuverName]::[&ManeuverMacro][/rbutton]
+  --~ManeuverName|array;getnext;ManeuverNames
+  --?"[&ManeuverName]" -inc Error|ButtonsDone
+  --^LoopManeuverNames|
+  --:ButtonsDone|
+  --+|[c][&Output][/c]
+  --X|
+  
+  --:BullRush|
+	--#title|[*S:t-name] - Bull Rush
+	--#leftsub|
+	--IWhat is your ;Bull Rush Target?|t;RushTarget;Bull Rush Target
+	--#targetToken|[&RushTarget]
+	--?[*S:class_1_level] -inc operative|=AbilityMod;[*S:dexterity_mod]|=AbilityMod;[*S:strength_mod]
+	--=AttackRoll|1d20 [Base] + [*S:bab] [Base Attack] + [$AbilityMod] [Ability Mod]
+	--=WhatToHit|[*T:kac] + 8
+	--+Push it!|[*S:t-name] - rolls [$AttackRoll] to bull rush [*T:t-name].
+	--?[$AttackRoll] -ge [$WhatToHit]|BullRushSuccess
+	--+Failed|[i]You fail to bull rush [*T:t-name].[/i]
+	--X|
+	--:BullRushSuccess|
+	--=PushBackResult|[$AttackRoll] - [$WhatToHit] / 5 {CEIL} * 5
+	--=GridPushUnits|[$PushBackResult] \ 5 
+	--IWhat direction is the ;Bull Rush?|q;PushDirection;Which angle is [*T:t-name] pushed?|0|45|90|135|180|225|270|315
+        --=PushDirection|[&PushDirection]
+	--+Success|[i]You successfully push [*T:t-name] back [b][$PushBackResult] feet[/b]![/i]
+	--@token-mod|_ignore-selected _ids [*T:t-id] _move [$PushDirection]|[$GridPushUnits]g
+	--X|
+	  
+  --:CoveringFire|
+	--#title|[*S:t-name] - Covering Fire
+	--#leftsub|
+	--IWho will benefit from your; Covering Fire?|t;CoveringFireTarget;Covering Fire Target
+	--#targetToken|[&CoveringFireTarget]
+	--=AttackRoll|1d20 [Base] + [*S:bab] [Base Attack] + [*S:dexterity_mod] [Ability Mod]
+	--=WhatToHit|15
+	--?[$AttackRoll] -ge [$WhatToHit]|CoveringSuccess
+	--+Failed|[i]You fail to provide any cover for [*T:t-name].[/i]
+	--X|
+	--:CoveringSuccess|
+	--+Success|[i]You successfully cover [*T:t-name] providing them a [b]+2 circumstance bonus to AC[/b] against the next attack from a creature in your line of effect![/i]
+	--X|
+  
+  --:Demoralize|
+	--#title|[*S:t-name] - Demoralize
+	--#leftsub|
+	--IWho are you ;Demoralizing?|t;DemoralizeTarget;Demoralize Target
+	--#targetToken|[&DemoralizeTarget]
+	--=AttackRoll|1d20 [Base] + [*S:intimidate] [Intimidate]
+	--=OppIntimidate|10 + [*T:intimidate]
+	--=CRDC|[*T:character_level] * 1.5 {CEIL} + 15
+	--~WhatToHit|math;max;[$OppIntimidate];[$CRDC]
+	--?[$AttackRoll] -ge [$WhatToHit]|DemoralizeSuccess
+	--+Failed|[i]You fail to demoralize [*T:t-name].[/i]
+	--X|
+	--:DemoralizeSuccess|
+	--=DemoralizeResult|[$AttackRoll] - [$WhatToHit] / 5 {CEIL}
+	--+Success|[i]You successfully demoralize [*T:t-name] for [b][$DemoralizeResult] round(s)[/b]![/i]
+	--@setattr|_charid [*T:character_id] _shaken|1
+	--X|
+  
+  --:DirtyTrick|
+	--#title|[*S:t-name] - Dirty Trick
+	--#leftsub|
+    --IWhat is your ;Dirty Trick Target?|t;DirtyTarget;Dirty Trick Target
+	--#targetToken|[&DirtyTarget]
+	--?[*S:class_1_level] -inc operative|=AbilityMod;[*S:dexterity_mod]|=AbilityMod;[*S:strength_mod]
+	--=AttackRoll|1d20 [Base] + [*S:bab] [Base Attack] + [$AbilityMod] [Ability Mod]
+	--=WhatToHit|[*T:kac] + 8
+	--+Pocket sand!|[*S:t-name] - rolls [$AttackRoll] in a dirty trick against [*T:t-name].
+	--?[$AttackRoll] -ge [$WhatToHit]|DirtyTrickSuccess
+	--+Failed|[i]You fail with your dirty trick against [*T:t-name].[/i]
+	--X|
+	--:DirtyTrickSuccess|
+	--=DirtyTrickResult|[$AttackRoll] - [$WhatToHit] / 5 {CEIL}
+	--IWhat condition are you applying with ;the trick?|q;DirtyTrickCondition;What condition are you applying with the trick?|Blinded|Deafened|Entangled|Off-target|Shaken|Sickened
+	--+Success|[i]You successfully cause [*T:t-name] to be [b][&DirtyTrickCondition] for [$DirtyTrickResult] round(s)[/b]![/i]
+	--@setattr|_charid [*T:character_id] _[&DirtyTrickCondition]|1
+	--X|
+	
+  --:Disarm|
+	--#title|[*S:t-name] - Disarm
+	--#leftsub|
+	--IWhat is your ;Disarm Target?|t;DisarmTarget;Disarm Target
+	--#targetToken|[&DisarmTarget]
+	--?[*S:class_1_level] -inc operative|=AbilityMod;[*S:dexterity_mod]|=AbilityMod;[*S:strength_mod]
+	--=AttackRoll|1d20 [Base] + [*S:bab] [Base Attack] + [$AbilityMod] [Ability Mod]
+	--=WhatToHit|[*T:kac] + 8
+	--+Disarm|[*S:t-name] - rolls [$AttackRoll] in a disarm attempt against [*T:t-name].
+	--?[$AttackRoll] -ge [$WhatToHit]|DisarmSuccess
+	--+Failed|[i]You fail your Disarm against [*T:t-name].[/i]
+	--X|
+	--:DisarmSuccess|
+	--+Success|[i]You successfully [b]disarm [*T:t-name][/b]! If you have a free hand, you can grab the disarmed item.[/i]
+	--X|
+  
+  --:Escape|
+	--#title|[*S:t-name] - Escape
+	--#leftsub|
+	--IWho are you ;Escaping?|t;EscapeTarget;Escape Target
+	--#targetToken|[&EscapeTarget]
+	--=AttackRoll|1d20 [Base] + [*S:acrobatics] [Acrobatics]
+	--=WhatToHit|10 + [*T:kac]
+	--?[$AttackRoll] -ge [$WhatToHit]|EscapeSuccess
+	--+Failed|[i]You fail to escape [*T:t-name]'s grapple.[/i]
+	--X|
+	--:EscapeSuccess|
+	--+Success|[i]You [b]successfully escape[/b] [*T:t-name]'s grapple![/i]
+	--X|
+  
+  --:Feint|
+	--#title|[*S:t-name] - Feint
+	--#leftsub|
+	--IWhat is your ;Feint Target?|t;FeintTarget;Feint Target
+	--#targetToken|[&FeintTarget]
+	--=AttackRoll|1d20 [Base] + [*S:bluff] [Bluff]
+	--=SenseMotive|10 + [*T:sense_motive]
+	--=CRDC|[*T:character_level] * 1.5 {CEIL} + 15
+	--~WhatToHit|math;max;[$SenseMotive];[$CRDC]
+	--?[$AttackRoll] -ge [$WhatToHit]|FeintSuccess
+	--+Failed|[i]You fail your feint against [*T:t-name].[/i]
+	--X|
+	--:FeintSuccess|
+	--+Success|[i]You successfully distract [*T:t-name]! They are flatfooted against your next attack this round.[/i]
+	--@setattr|_charid [*T:character_id] _set flat-footed|1
+	--X|
+
+  
+  --:Grapple|
+	--#title|[*S:t-name] - Grapple
+	--#leftsub|
+	--IWhat is your ;Grapple Target?|t;GrappleTarget;Grapple Target
+	--#targetToken|[&GrappleTarget]
+	--?[*S:class_1_level] -inc operative|=AbilityMod;[*S:dexterity_mod]|=AbilityMod;[*S:strength_mod]
+	--=AttackRoll|1d20 [Base] + [*S:bab] [Base Attack] + [$AbilityMod] [Ability Mod]
+	--=WhatToHit|[*T:kac] + 8
+	--=PinSuccess|[*T:kac] + 13
+	--+Grapple|[*S:t-name] - rolls [$AttackRoll] in a Grapple attempt against [*T:t-name].
+	--?[$AttackRoll] -ge [$PinSuccess]|PinSuccess
+	--?[$AttackRoll] -ge [$WhatToHit]|GrappleSuccess
+	--+Failed|[i]You fail your grapple against [*T:t-name].[/i]
+	--X|
+	--:GrappleSuccess|
+	--+Success|[i]You successfully grapple [*T:t-name]! They may attempt to reverse the grapple or escape on their turn.[/i]
+	--@setattr|_charid [*T:character_id] _set grappled|1
+	--X|
+	--:PinSuccess|
+	--+Success|[i]You successfully pin [*T:t-name] to the ground! They can't take any movement actions except to attempt escape on their turn.[/i]
+	--@setattr|_charid [*T:character_id] _set pinned|1
+	--X|
+  
+  --:HarryingFire|
+	--#title|[*S:t-name] - Harrying Fire
+	--#leftsub|
+	--IWho are you distracting with your; Harrying Fire?|t;HarryingFireTarget;Harrying Fire Target
+	--#targetToken|[&HarryingFireTarget]
+	--=AttackRoll|1d20 [Base] + [*S:bab] [Base Attack] + [*S:dexterity_mod] [Ability Mod]
+	--=WhatToHit|15
+	--?[$AttackRoll] -ge [$WhatToHit]|HarryingFireSuccess
+	--+Failed|[i]You fail to distract [*T:t-name].[/i]
+	--X|
+	--:HarryingFireSuccess|
+	--+Success|[i]You successfully [b]distract [*T:t-name][/b] providing the next ally to attack them this round a +2 circumstance bonus to hit![/i]
+	--X|
+  
+  --:Reposition|
+	--#title|[*S:t-name] - Reposition
+	--#leftsub|
+	--IWhat kind of ;action?|q;ActionType;Is this a Full or Standard Action?|Standard|Full
+	--IWhat is your ;Reposition Target?|t;RepositionTarget;Reposition Target
+	--#targetToken|[&RepositionTarget]
+	--?[*S:class_1_level] -inc operative|=AbilityMod;[*S:dexterity_mod]|=AbilityMod;[*S:strength_mod]
+	--=AttackRoll|1d20 [Base] + [*S:bab] [Base Attack] + [$AbilityMod] [Ability Mod]
+	--=WhatToHit|[*T:kac] + 8
+	--+Move over here!|[*S:t-name] - rolls [$AttackRoll] in an attempt to reposition [*T:t-name].
+	--?[$AttackRoll] -ge [$WhatToHit]|RepositionSuccess
+	--+Failed|[i]You fail to reposition [*T:t-name].[/i]
+	--X|
+	--:RepositionSuccess|
+	--=RepositionResult|[$AttackRoll] - [$WhatToHit] / 5 {CEIL} * 5
+	--?[&ActionType] -eq Full|&FullAddendum;You can move a distance equal to the distance you reposition your target (up to your move speed), dragging them along with you.
+	--+Success|[i]You successfully Reposition [*T:t-name] up to [b][$RepositionResult] feet[/b] within your reach! [&FullAddendum][/i]
+	--X|
+  
+  --:Sunder|
+	--#title|[*S:t-name] - Sunder
+	--#leftsub|
+	--IWhat is your ;Sunder Target?|t;SunderTarget;Sunder Target
+	--#targetToken|[&SunderTarget]
+	--?[*S:class_1_level] -inc operative|=AbilityMod;[*S:dexterity_mod]|=AbilityMod;[*S:strength_mod]
+	--=AttackRoll|1d20 [Base] + [*S:bab] [Base Attack] + [$AbilityMod] [Ability Mod]
+	--=WhatToHit|[*T:kac] + 8
+	--+Break it!|[*S:t-name] - rolls [$AttackRoll] in an attempt to sunder one of [*T:t-name]'s items.
+	--?[$AttackRoll] -ge [$WhatToHit]|SunderSuccess
+	--+Failed|[i]You fail to sunder [*T:t-name]'s item.[/i]
+	--X|
+	--:SunderSuccess|
+	--+Success|[i]You successfully sunder [*T:t-name]'s item.[/i] [button]Roll Weapon Damage::~GenericMacro|DiceRoller[/button]
+	--X|
+  
+  --:Trip|
+	--#title|[*S:t-name] - Trip
+	--#leftsub|
+	--IWhat is your ;Trip Target?|t;TripTarget;Trip Target
+	--#targetToken|[&TripTarget]
+	--?[*S:class_1_level] -inc operative|=AbilityMod;[*S:dexterity_mod]|=AbilityMod;[*S:strength_mod]
+	--=AttackRoll|1d20 [Base] + [*S:bab] [Base Attack] + [$AbilityMod] [Ability Mod]
+	--=WhatToHit|[*T:kac] + 8
+	--+Move over here!|[*S:t-name] - rolls [$AttackRoll] in an attempt to Trip one of [*T:t-name].
+	--?[$AttackRoll] -ge [$WhatToHit]|TripSuccess
+	--+Failed|[i]You fail to trip [*T:t-name].[/i]
+	--X|
+	--:TripSuccess|
+	--+Success|[i]You successfully trip [*T:t-name]. They fall prone.[/i] 
+	--@setattr|_charid [*T:character_id] _set prone|1
+	--X|
+  
+  --:TumbleThrough|
+	--#title|[*S:t-name] - Tumble Through
+	--#leftsub|
+	--=k|0
+	--IWhat speed are you going?; Half or Full?|q;SpeedType;Are you trying to tumble at half or full speed?|Half|Full
+	--:TumbleLoopStart|
+	--IWho are you trying to ;Tumble Through?|t;TumbleThroughTarget;Tumble Through Target
+	--#targetToken|[&TumbleThroughTarget]
+	--=MultipleAttempt|[$k] + 2
+	--?[&SpeedType] -eq Full|=SpeedPenalty;10|=SpeedPenalty;0
+	--+Can't hit me!|[*S:t-name] - rolls [$AttackRoll] in an attempt to tumble through one of [*T:t-name]'s threatened spaces.
+	--=AttackRoll|1d20 [Base] + [*S:acrobatics] [Acrobatics] - [$SpeedPenalty] [Speed Penalty]
+	--=WhatToHit|[*T:character_level] * 1.5 {CEIL} + 15 + [$MultipleAttempt]
+	--?[$AttackRoll] -ge [$WhatToHit]|TumbleThroughSuccess
+	--+Failed|[i]You fail to tumble through [*T:t-name]'s space and they get an attack of opportunity![/i]
+	-->AskAnother|
+	--X|
+	--:TumbleThroughSuccess|
+	--+Success|[i]You tumble through [*T:t-name]'s space avoiding an attack of opportunity![/i]
+	-->AskAnother|
+	--X|
+	--:AskAnother|
+	--=k|[$k] + 1
+	--IDo you need to tumble through ;another space?|q;MoreSpace;Are you continuing your tumble?|No|Yes
+	--?[&MoreSpace] -eq Yes|TumbleLoopStart
+	--:EndTumble|
+	--X|
+}}

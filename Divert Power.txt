@@ -1,0 +1,56 @@
+!scriptcard {{
+--#sourceToken|@{selected|token_id}
+--#emoteState|hidden
+--#title|[*S:character_name] - Divert Power
+--#buttonFontSize|medium
+
+--@setattr|_charid [*S:character_id] _engine_divert|No _science_divert|No _weapon_divert|No _silent
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+
+--IWhere are you ; diverting power?|q;DivertTarget;What system are you diverting power to?|Engine|Science|Weapon|Shields
+
+--=EngineeringRoll|1d20 + [*[&SpeakingAs]:engineering]
+--=DivertDC|[*S:ship_tier] * 2 + 10
+--?[$EngineeringRoll] -ge [$DivertDC]|Success|Failure
+
+--:Success|
+	--?[&DivertTarget] -eq Shields|ShieldSuccess
+	--+Success|[i]Your [b]power diverting was successful[/b] and will gives the [&DivertTarget] crew on [*S:character_name] a bonus this round with a roll of [$EngineeringRoll]![/i]
+	--@setattr|_charid [*S:character_id] _[&DivertTarget]_divert|Yes _silent
+	--X|
+	--:ShieldSuccess|
+		--=PCURating|[*S:ship_pcu^]
+		--=RestoreShieldPoints|[$PCURating] \ 20
+		--=AftShields|[*S:aft_shields]
+		--=StarboardShields|[*S:starboard_shields]
+		--=ForwardShields|[*S:forward_shields]
+		--=PortShields|[*S:port_shields]
+		--=CurrentShields|[*S:shield_total]
+		--=MaximumShields|[*S:shield_total^]
+		--=ShieldLoss|[$MaximumShields] - [$CurrentShields]
+			--:RegenShields|
+			--?[$MaximumShields] -eq [$CurrentShields]|ShieldsAtMaximum
+			--?[$RestoreShieldPoints] -gt [$ShieldLoss]|FullShields
+			--=EachQuadrant|[$RestoreShieldPoints] / 4 {FLOOR}
+			--=Remainder|[$EachQuadrant] * 4 - [$RestoreShieldPoints] {ABS}
+			--=ForwardQuadrant|[$EachQuadrant] + [$Remainder]
+			--@modattr|_charid [*S:character_id] _starboard_shields|+[$EachQuadrant] _port_shields|+[$EachQuadrant] _aft_shields|+[$EachQuadrant] _forward_shields|+[$ForwardQuadrant] _silent
+		--+Shields charging!|[i]You have [b]successfully diverted power to shields[/b], repairing them [$RestoreShieldPoints.Raw] points.[/i]
+		--X|
+			
+--:Failure|
+	--+Failed|[i]You [b]fail to divert power[/b] this round with a roll of [$EngineeringRoll]![/i]
+	--X|
+	
+--:ShieldsAtMaximum|
+	--+Shields at Maximum!|[i]You have reached the maximum capacity for your shields.[/i]
+	--X|
+	
+--:FullShields|
+	--=QuadrantMax|[$MaximumShields] / 4 {FLOOR}
+	--=Remainder|4 * [$QuadrantMax] - [$MaximumShields] {ABS}
+	--=ForwardMax|[$QuadrantMax] + [$Remainder]
+	--@setattr|_charid [*S:character_id] _starboard_shields|[$QuadrantMax] _port_shields|[$QuadrantMax] _aft_shields|[$QuadrantMax] _forward_shields|[$ForwardMax] _silent
+	--+Shields at Maximum!|[i]Your shields are back to full power![/i]
+	--X|
+}}

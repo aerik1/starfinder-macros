@@ -1,0 +1,89 @@
+!scriptcard {{
+--#sourceToken|@{selected|token_id}
+--#targetToken|@{target|token_id}
+--#emoteState|hidden
+--#title|[*S:character_name] - Scrying
+--#buttonFontSize|medium
+
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+
+--=CaptainBonus|0
+-->AskComputerBonus|[*S:character_id]
+-->CheckArcaneLab|
+--?[*S:demand_on] -eq Yes -and [*S:demand_target] -eq Gunner|>SetCaptainBonus;4
+--?[*S:encourage_on] -eq Yes -and [*S:encourage_target] -eq Gunner|>SetCaptainBonus;2
+--=MysticismRoll|1d20 + [*[&SpeakingAs]:Mysticism] + [$CaptainBonus] [Captain Bonus] + [$ComputerBonus] [Computer Bonus] + [$LabBonus] [Lab Bonus]
+--=ScryingDC|[*T:ship_tier] * 2 + 10
+--?[$MysticismRoll] -ge [$ScryingDC]|Success|Failure
+
+--:Success|
+	--?[*T:basic_info] -eq Yes|DefenseInfo
+	
+	--:BasicInfo|
+	--@setattr|_charid [*T:character_id] _basic_info|Yes _silent
+	--+Scrying Complete!|[i]You learn that there are [b][*T:ship_complement] crew[/b] onboard this [*T:make_model] named [*T:character_name]. It is a [b][*T:size] [*T:frame][/b] with [b]Speed [*T:speed] ([*T:maneuverability])[/b].[/i]
+	--X|
+	
+	--:DefenseInfo|
+		--?[*T:defense_info] -eq Yes|WeaponInfo
+		--@setattr|_charid [*T:character_id] _defense_info|Yes _silent
+		--+Scrying Complete!|[i]You learn that your target has an [b]AC of [*T:ac] and a TL of [*T:tl][/b]. The core PCU value is [*T:ship_pcu^]. Their shields are currently at [b][*T:shield_total] out of [*T:shield_total^][/b]. Their quadrant strengths are Forward [*T:forward_shields], Aft [*T:aft_shields], Port [*T:port_shields], and Starboard [*T:starboard_shields].[/i]
+		--X|
+	
+	--:WeaponInfo|
+		--?[*T:weapon_info] -eq Yes|LoadInfo
+		--@setattr|_charid [*T:character_id] _weapon_info|Yes _silent
+		--Rfirst|@{selected|character_id};repeating_attack
+		--:WeaponLoop|
+		--?"[*R:name]" -inc Loaded|WeaponDone
+		--&WeaponOutput|+There is a [*R:name] in the [*R:arc] arc. 
+		--Rnext|
+		--Rnext|
+		--^WeaponLoop|
+		--:WeaponDone|
+		--+Scrying Complete!|[i]You learn about [*T:character_name]'s weapons. [&WeaponOutput][/i]
+		--X|
+		
+	--:LoadInfo|
+		--?[*T:load_info] -eq Yes|OtherInfo
+		--@setattr|_charid [*T:character_id] _load_info|Yes _silent
+		--Rfirst|@{selected|character_id};repeating_system
+		--:LoadLoop|
+		--?"[*R:name]" -inc Loaded|LoadDone
+		--?[*R:purpose] -eq expansion-bay|&LoadOutput;+[*R:name]
+		--Rnext|
+		--^LoadLoop|
+		--:LoadDone|		
+		--+Scrying Complete!|[i]You learn that your target is carrying [b][*T:cargo][/b]. The expansion bays are [&LoadOutput].[/i]
+		--X|
+		
+	--:OtherInfo|
+		--+Scrying Complete!|[i]You have all the information about this vessel.[/i]
+		--X|	
+			
+--:Failure|
+	--+Failed|[i]You [b]fail to discern anything[/b] about the enemy ship this round with a roll of [$MysticismRoll]![/i]
+	--X|
+	
+--:SetCaptainBonus|
+	--=CaptainBonus|[%1%]
+	--?[$CaptainBonus] -eq 4|WipeDemand
+	--@setattr|_charid [*S:character_id] _encourage_on|No _encourage_target|None _silent
+	--<|
+	--:WipeDemand|
+	--@setattr|_charid [*S:character_id] _demand_on|No _demand_target|None _silent
+	--<|
+	
+--:CheckArcaneLab|
+	--=LabBonus|0
+	--Rfirst|[*S:character_id];repeating_system
+	--:SystemLoop|
+	--?"[*R:name]" -inc Loaded|SystemDone
+	--?"[*R:name]" -inc "Arcane Laboratory"|SystemFound
+	--Rnext|
+	--^SystemLoop|
+	--:SystemFound|
+	--=LabBonus|2
+	--:SystemDone|
+	--<| 
+}}

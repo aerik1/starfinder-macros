@@ -1,0 +1,13 @@
+!scriptcard {{ 
+	+++Starfinder++
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+--#sourceToken|[&SpeakingAs]
+  --#emoteState|hidden
+  --#whisper|self
+
+  --Lsettings|[*[&SpeakingAs]:character_name]
+  --#title|[*[&SpeakingAs]:t-name] Actions
+  --#leftsub|What do you want to do?
+  --+|[c] [button]Ability Check::~GenericMacro|AbilityCheck[/button] [button]Combat Maneuver::~GenericMacro|CombatManeuver[/button] [button]Dice Roller::~GenericMacro|DiceRoller[/button] [button]Make An Attack::~GenericMacro|PCAttackList[/button] [button]Saving Throw::~GenericMacro|RollSave[/button] [button]Skill Check::~GenericMacro|SkillCheckMenu[/button] [button]Use an Item::~GenericMacro|Items[/button] [button]Starship Actions::~GenericMacro|StarshipActions[/button] [button]Daily Preparations::~GenericMacro|DailyPrep[/button][/c]
+  --X|  
+}}

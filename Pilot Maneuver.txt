@@ -1,0 +1,55 @@
+!scriptcard {{
+--#sourceToken|@{selected|token_id}
+--#emoteState|hidden
+--#title|[*S:character_name] - Maneuver
+--#buttonFontSize|x-large
+
+--=ShipSpeed|[*S:speed]
+--&Maneuverability|[*S:maneuverability_info]
+--~MoveBeforeTurn|string;after; ;[&Maneuverability]
+--=MoveBeforeTurn|[&MoveBeforeTurn]
+--=MovementThisRound|0
+--=MovementSinceLastRotate|0
+
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+--=PilotingCheck|1d20 [Base] + [*[&SpeakingAs]:piloting] [Skill]
+--=ManeuverDC|[*S:ship_tier] * 2 + 15
+--?[$PilotingCheck] -ge [$ManeuverDC]|Success|Failure
+--:Success|
+	--+Success|[i]Your expert piloting [b]improves[/b] [*S:character_name]'s maneuverability by 1 with a roll of [$PilotingCheck]![/i]
+	--=MoveBeforeTurn|[$MoveBeforeTurn] - 1
+	--^DirectionButtons|
+--:Failure|
+	--+Failed|[i]You [b]fail[/b] to improve [*S:character_name]'s maneuverability this turn with a roll of [$PilotingCheck]![/i]
+	--^DirectionButtons|
+
+
+--:DirectionButtons|
+--=MovementLeft|[*S:speed] - [$MovementThisRound]
+--#leftsub|Movement Left: [$MovementLeft]
+--+|[br][c][rbutton]&#11119;::RotateLeft[/rbutton]  [rbutton]&#129121;::GoForwards[/rbutton]     [rbutton]&#11118;::RotateRight[/rbutton]  [/c][br]
+--X|
+
+--:RotateLeft|
+	--?[$MovementSinceLastRotate] -lt [$MoveBeforeTurn]|NotEnough
+	--@token-mod|_ignore-selected _ids [*S:t-id] _set rotation|-60
+	--=MovementSinceLastRotate|0
+	--^DirectionButtons|
+
+--:RotateRight|
+	--?[$MovementSinceLastRotate] -lt [$MoveBeforeTurn]|NotEnough
+	--@token-mod|_ignore-selected _ids [*S:t-id] _set rotation|+60
+	--=MovementSinceLastRotate|0
+	--^DirectionButtons|
+	
+--:GoForwards|
+	--=MovementThisRound|[$MovementThisRound] + 1
+	--=MovementSinceLastRotate|[$MovementSinceLastRotate] + 1
+	--@token-mod|_ignore-selected _ids [*S:t-id] _move 1.14285u
+	--^DirectionButtons|
+	
+--:NotEnough|
+	--+Keep Going!|You have not gone far enough since your last turn to make another.
+	--^DirectionButtons|
+	--X|
+}}

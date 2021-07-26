@@ -1,0 +1,122 @@
+!scriptcard {{
+--#sourceToken|@{selected|token_id}
+--#emoteState|hidden
+--#title|[*S:character_name] - Stunt
+--#buttonFontSize|medium
+
+--=ShipSpeed|[*S:speed]
+--=HalfSpeed|[$ShipSpeed] \ 2 * 1.14285
+--&Maneuverability|[*S:maneuverability_info]
+--~MoveBeforeTurn|string;after; ;[&Maneuverability]
+--=MoveBeforeTurn|[&MoveBeforeTurn]
+--=MovementThisRound|0
+--=MovementSinceLastRotate|0
+
+--~SpeakingAs|string;after;|;[&SendingPlayerSpeakingAs]
+--=PilotingCheck|1d20 [Base] + [*[&SpeakingAs]:piloting] [Skill]
+--=ManeuverDC|[*S:ship_tier] * 2 + 15
+
+--:StuntButtons|
+	--=MovementLeft|[*S:speed] - [$MovementThisRound]
+	--#leftsub|Which Stunt?
+	--+|[br][c][rbutton]Back Off::BackOff[/rbutton]  [rbutton]Barrel Roll::BarrelRoll[/rbutton]     [rbutton]Evade::Evade[/rbutton]  [rbutton]Flip & Burn::FlipBurn[/rbutton] [rbutton]Flyby::Flyby[/rbutton] [rbutton]Slide::Slide[/rbutton] [rbutton]Turn in Place::TurnPlace[/rbutton][/c][br]
+	--X|
+
+	--:BackOff|
+		--#leftsub|Back Off!
+		--=BackOffDC|[*S:ship_tier] * 2 + 10
+		--=CritFail|[$BackOffDC] - 5
+		--?[$PilotingCheck] -lt [$CritFail]|BackOffCritFail
+		--?[$PilotingCheck] -ge [$BackOffDC]|BackOffSuccess
+		--:BackOffFailure|
+			--+Failure|[i]You have [b]failed to back off properly[/b] with a roll of [$PilotingCheck]. [*S:character_name] only moves backwards 1 hex. [/i]
+			--@token-mod|_ignore-selected _ids [*S:t-id] _move 180|1.14285u
+			--X|
+		--:BackOffCritFail|
+			--+Critical Failure!|[i]You have [b]failed to back off properly[/b] with a roll of [$PilotingCheck]. [*S:character_name] does not move and further has a -4 to AC and TL this round. [/i]
+			--X|
+		--:BackOffSuccess|
+			--+Success!|[i]You have [b]succeeded in backing off properly[/b] with a roll of [$PilotingCheck]. [/i]
+			--@token-mod|_ignore-selected _ids [*S:t-id] _move 180|[$HalfSpeed]u
+			--X|
+			
+	--:BarrelRoll|
+		--#leftsub|Barrel Roll!
+		--=BarrelRollDC|[*S:ship_tier] * 2 + 10
+		--=CritFail|[$BarrelRollDC] - 5
+		--?[$PilotingCheck] -lt [$CritFail]|BarrelRollCritFail
+		--?[$PilotingCheck] -ge [$BarrelRollDC]|BarrelRollSuccess
+		--:BarrelRollFailure|
+			--+Failure|[i]You have [b]failed to barrel roll properly[/b] with a roll of [$PilotingCheck]. [*S:character_name] does not spin. [/i]
+			--@token-mod|_ignore-selected _ids [*S:t-id] _move [$HalfSpeed]u
+			--X|
+		--:BarrelRollCritFail|
+			--+Critical Failure|[i]You have [b]failed to barrel roll properly[/b] with a roll of [$PilotingCheck]. [*S:character_name] does not spin and takes a -4 to AC and TL until next round. [/i]
+			--@token-mod|_ignore-selected _ids [*S:t-id] _move [$HalfSpeed]u
+			--X|
+		--:BarrelRollSuccess|
+			--+Success!|[i]You have [b]succeeded in your barrel roll[/b] with a roll of [$PilotingCheck]. [/i]
+			--@token-mod|_ignore-selected _ids [*S:t-id] _move [$BackOffSpeed]u
+			--X|
+		
+		--:Evade|
+			--#leftsub|Evade!
+			--=EvadeDC|[*S:ship_tier] * 2 + 10
+			--=CritFail|[$EvadeDC] - 5
+			--?[$PilotingCheck] -lt [$CritFail]|EvadeCritFail
+			--?[$PilotingCheck] -ge [$BarrelRollDC]|EvadeSuccess
+			--:EvadeFailure|
+				--+Failure|[i]You have [b]failed to evade[/b] with a roll of [$PilotingCheck].[/i] [sheetbutton]Fly as normal::StarshipMacros::Fly[/sheetbutton]
+				--X|
+			--:EvadeCritFail|
+				--+Critical Failure|[i]You have [b]failed to evade[/b] with a roll of [$PilotingCheck] and [*S:character_name] takes a -2 to AC and TL until the next round.[/i] [sheetbutton]Fly as normal::StarshipMacros::Fly[/sheetbutton] 
+				--X|
+			--:EvadeSuccess|
+				--+Success!|[i]You have [b]succeeded in evading[/b] with a roll of [$PilotingCheck]. [*S:character_name] gets a +2 to AC and TL until the next round. [sheetbutton]Fly as normal::StarshipMacros::Fly[/sheetbutton][/i]
+				--X|
+				
+		--:FlipBurn|
+			--#leftsub|Flip & Burn!
+			--=FlipBurnDC|[*S:ship_tier] * 2 + 15
+			--?[$PilotingCheck] -ge [$FlipBurnDC]|FlipBurnSuccess
+			--:FlipBurnFailure|
+				--+Failure|[i]You have [b]failed to flip[/b] with a roll of [$PilotingCheck].[/i]
+				--@token-mod|_ignore-selected _ids [*S:t-id] _move [$HalfSpeed]u
+				--X|
+			--:FlipBurnSuccess|
+				--+Success!|[i]You have [b]succeeded in the flip and burn[/b] with a roll of [$PilotingCheck].[/i]
+				--@token-mod|_ignore-selected _ids [*S:t-id] _move [$HalfSpeed]u _set rotation|180
+				--X|
+				
+		--:Flyby|
+			--#leftsub|Flyby!
+			--=Flyby|[*S:ship_tier] * 2 + 20
+			--?[$PilotingCheck] -ge [$FlybyDC]|FlybySuccess
+			--:FlybyFailure|
+				--+Failure|[i]You have [b]failed to flyby[/b] with a roll of [$PilotingCheck]. You attack and provoke attacks as normal.[/i][br][sheetbutton]Fly as normal::StarshipMacros::Fly[/sheetbutton]
+				--X|
+			--:FlybySuccess|
+				--+Success!|[i]You have [b]succeeded in your flyby[/b] with a roll of [$PilotingCheck]. [*S:character_name] can move through 1 hex occupied by an enemy starship without provoking a free attack. During the following gunnery phase, you can select one arc of your starship’s weapons to fire at the enemy vessel as if the vessel were in close range (treat the range as 1 hex), against any quadrant of the enemy starship.[/i] [br][sheetbutton]Fly as normal::StarshipMacros::Fly[/sheetbutton]
+				--X|
+				
+		--:Slide|
+			--#leftsub|Slide!
+			--=SlideDC|[*S:ship_tier] * 2 + 10
+			--?[$PilotingCheck] -ge [$SlideDC]|SlideSuccess
+			--:SlideFailure|
+				--+Failure|[i]You have [b]failed to slide[/b] with a roll of [$PilotingCheck]. You move forward instead.[/i]
+				--@token-mod|_ignore-selected _ids [*S:t-id] _move [$HalfSpeed]u
+				--X|
+			--:SlideSuccess|
+				--+Success!|[i]You have [b]succeeded in the slide[/b] with a roll of [$PilotingCheck].[/i]
+				--IWhich direction will you ; slide?|q;SlideDirection;Which direction will you slide?|Forward Left|Forward Right
+				--?"[&SlideDirection]" -eq "Forward Left"|=SlideAngle;300|=SlideAngle;60
+				--@token-mod|_ignore-selected _ids [*S:t-id] _move [$SlideAngle]|[$HalfSpeed]u 
+				--X|
+				
+		--:TurnPlace|
+			--#leftsub|Turn in Place!
+			--+Spin me right round!|[i]You may orient [*S:character_name] to any facing.[/i]
+			--X|
+
+}}

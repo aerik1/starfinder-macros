@@ -1,0 +1,17 @@
+!scriptcard {{
+--#emoteState|Hidden
+--~PageTokens|array;selectedtokens;Characters
+--~CurrentCharacter|array;getfirst;Characters
+--#title|Rolling Inititive
+
+--:InititiveLoop|
+--#sourceToken|[&CurrentCharacter]
+--=CharInitiative|1d20 [Base] + [*S:initiative] [Skill]
+--?[*S:sheet_type] -eq npc|&NPCInit;+[img width=32 height=32][*S:t-imgsrc][/img][&CharName] rolls a [$CharInitiative] for initiative.[br][br]|&PlayerInit;+[img width=32 height=32][*S:t-imgsrc][/img][*S:t-name] rolls a [$CharInitiative] for initiative.[br][br]
+--~|turnorder;replacetoken;[&CurrentCharacter];[$CharInitiative]
+--~CurrentCharacter|array;getnext;Characters
+--?[&CurrentCharacter] -eq ArrayError|InititiveDone|InititiveLoop|
+--:InititiveDone|
+--+|[c][&PlayerInit][/c]
+--*|[c][&NPCInit][/c]
+}}

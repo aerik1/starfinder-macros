@@ -1,0 +1,161 @@
+!scriptcard {{ 
+--#whisper|GM
+--Lsettings|npcsettings
+--#sourceToken|@{selected|token_id}
+--#emoteState|Hidden
+--#title|Computer Building
+
+--?[*S:ship_tier] -ge 1|Starship
+
+--:BaseMenu|
+--&Output|[rbutton]Current Stats::CurrentStats[/rbutton] [rbutton]Initial Setup::InitialSetup[/rbutton] [rbutton]Set Tier::SetTier[/rbutton] [rbutton]Set UI::SetUI[/rbutton] [rbutton]Set Modules::SetModules[/rbutton] [rbutton]Set Countermeasures::SetCountermeasures[/rbutton] 
+--+|[c][&Output][/c]
+--X|
+
+--:SetTier|
+	--IWhat ; tier?|q;WhatTier;What Tier?
+	--@setattr|_charid [*S:character_id] _computer_tier|[&WhatTier]
+	--^BaseMenu|
+	--X|
+	
+--:SetUI|
+	--IWhat ; UI?|q;WhatUI;What UI?|Direct|Wired|Wireless
+	--@setattr|_charid [*S:character_id] _computer_UI|[&WhatUI]
+	--^BaseMenu|
+	--X|
+
+--:SetModules|
+	--=ControlNumber|0
+	--=DataNumber|0
+	--=SpellChip|0
+	--:ModuleMenu|
+	--&ModuleOutput|[c][rbutton]Add Control::AddControlModule[/rbutton] [rbutton]Add Secure Data::AddDataModule[/rbutton] [rbutton]Add Spell Chip::AddSpellChip[/rbutton] [rbutton]Add Security::AddSecurity[/rbutton] [rbutton]Base Menu::BaseMenu[/rbutton][/c]
+	--+|[&ModuleOutput]
+	--X|
+		
+		--:AddControlModule|
+			--=ControlNumber|[*S:control_module_number] + 1
+			--IWhat systems does this ; module control?|q;ControlledSystems;What systems are controlled by this module?
+			--IIs there a ; firewall?|q;Firewall;Firewall?|No|Firewalled
+			--@setattr|_charid [*S:character_id] _control_module_[$ControlNumber]|[&ControlledSystems] _control_module_number|[$ControlNumber] _control_module_[$ControlNumber]_firewall|[&Firewall]
+			--IAdd another ; control module?|q;MoreModules;More modules?|No|Yes
+			--?[&MoreModules] -eq Yes|AddControlModule
+			--^ModuleMenu|
+			--X|
+		--:AddDataModule|
+			--=DataNumber|[*S:data_module_number] + 1
+			--IWhat data is in ; data module?|q;DataSystems;What data is in this module?
+			--IIs there a ; firewall?|q;Firewall;Firewall?|No|Firewalled
+			--@setattr|_charid [*S:character_id] _data_module_[$DataNumber]|[&DataSystems] _data_module_number|[$DataNumber] _data_module_[$DataNumber]_firewall|[&Firewall]
+			--IAdd another ; data module?|q;MoreModules;More modules?|No|Yes
+			--?[&MoreModules] -eq Yes|AddDataModule
+			--^ModuleMenu|
+			--X|
+		--:AddSpellChip|
+			--=SpellChipNumber|[*S:spellchip_module_number] + 1
+			--IWhat spell is in this ; spell chip?|q;SpellChipSystems;What spell is in this spell chip?
+			--IIs there a ; firewall?|q;Firewall;Firewall?|No|Firewalled
+			--@setattr|_charid [*S:character_id] _spellchip_module_[$SpellChipNumber]|[&SpellChipSystems] _spellchip_module_number|[$SpellChipNumber] _spellchip_module_[$SpellChipNumber]_firewall|[&Firewall]
+			--IAdd another ; spell chip?|q;MoreModules;More modules?|No|Yes
+			--?[&MoreModules] -eq Yes|AddSpellChip
+			--^ModuleMenu|
+			--X|
+		--:AddSecurity|
+			--IWhat level is this ; security module?|q;SecuritySystems;What level is this security module?|1|2|3|4|5
+			--@setattr|_charid [*S:character_id] _security_upgrade|[&SecuritySystems] 
+			--^ModuleMenu|
+			--X|
+		--:SetCountermeasures|
+			--=CountermeasureNumber|0
+			--=FirewallNumber|0
+			--IWhat are you adding as a ; countermeasure?|q;WhatCountermeasure;What countermeasure are you adding?|Alarm|FakeShell|Feedback| Firewall|ShockGrid|Wipe
+			--C[&WhatCountermeasure]|Alarm:>Alarm|FakeShell:>FakeShell|Feedback:>Feedback|Firewall:>Firewall|ShockGrid:>ShockGrid|Wipe:>Wipe
+				--:Alarm|
+					--=CountermeasureNumber|[*S:countermeasure_number] + 1
+					--IWhat is the ; alarm?|q;AlarmResult;What happens when the alarm is triggered?
+					--IIs there a ; firewall?|q;Firewall;Firewall?|No|Firewalled
+					--@setattr|_charid [*S:character_id] _countermeasure_number|[$CountermeasureNumber] _alarm|Yes _alarm_results|[&AlarmResult] _alarm_firewall|[&Firewall]
+					--^BaseMenu|
+					--X|
+				--:FakeShell|
+					--=CountermeasureNumber|[*S:countermeasure_number] + 1
+					--@setattr|_charid [*S:character_id] _countermeasure_number|[$CountermeasureNumber] _fakeshell|Yes _fakeshell_access|No 
+					--^BaseMenu|
+					--X|
+				--:Feedback|
+					--=CountermeasureNumber|[*S:countermeasure_number] + 1
+					--IIs there a ; firewall?|q;Firewall;Firewall?|No|Firewalled
+					--@setattr|_charid [*S:character_id] _countermeasure_number|[$CountermeasureNumber] _feedback|Yes _feedback_firewall|[&Firewall]
+					--^BaseMenu|
+					--X|
+				--:ShockGrid|
+					--=CountermeasureNumber|[*S:countermeasure_number] + 1
+					--IWhat rank is this ; shock grid?|q;ShockRank;What rank is the shock grid?|1|2|3|4|5
+					--IIs there a ; firewall?|q;Firewall;Firewall?|No|Firewalled
+					--=ShockRank|[&ShockRank]
+					--=DamageDice|[$ShockRank] * 2 + 6
+					--&DamageDice|[$DamageDice.Raw]
+					--&ShockDamage|[&DamageDice]d6
+					--@setattr|_charid [*S:character_id] _countermeasure_number|[$CountermeasureNumber] _shock_grid|Yes _shock_grid_rank|[&ShockRank] _shock_grid_damage|[&DamageDice] _shock_grid_firewall|[&Firewall]
+					--^BaseMenu|
+					--X|
+				--:Wipe|
+					--=CountermeasureNumber|[*S:countermeasure_number] + 1
+					--IIs there a ; firewall?|q;Firewall;Firewall?|No|Firewalled
+					--@setattr|_charid [*S:character_id] _countermeasure_number|[$CountermeasureNumber] _wipe_installed|Yes _wipe_firewall|[&Firewall]
+					--^BaseMenu|
+					--X|
+					
+--:InitialSetup|
+	--@setattr|_charid [*S:character_id] _control_module_number|0 _spellchip_module_number|0 _security_upgrade|0 _data_module_number|0 _countermeasure_number|0 _alarm|No _shock_grid|No _firewall_number|0 _fakeshell|No _wiped|No _failed_access_attempts|0 _feedback|No _wipe_installed|No _alarm_firewall|No _feedback_firewall|No _shock_grid_firewall|No _wipe_firewall|No
+	--^BaseMenu|
+	--X|
+
+--:CurrentStats|
+	--+Tier:| [*S:computer_tier] 
+	--+UI:| [*S:computer_UI]
+	--?[*S:control_module_number] -eq 0|NoControlModules
+	--=i|0
+	--:ControlLoop|
+	--=i|[$i] + 1
+	--&ModuleContents|control_module_[$i.Raw]
+	--&ModuleFirewall|control_module_[$i.Raw]_firewall
+	--+Control Module [$i.Total]:| [*S:[&ModuleContents]] [b]Firewalled:[/b] [*S:[&ModuleFirewall]]
+	--?[$i] -lt [*S:control_module_number]|ControlLoop
+	--:NoControlModules|
+	--?[*S:data_module_number] -eq 0|NoDataModules
+	--=j|0
+	--:DataLoop|
+	--=j|[$j] + 1
+	--&DataContents|data_module_[$j.Raw]
+	--&DataFirewall|data_module_[$j.Raw]_firewall
+	--+Data Module [$j.Total]:| [*S:[&DataContents]] [b]Firewalled:[/b] [*S:[&DataFirewall]]
+	--?[$j] -lt [*S:data_module_number]|DataLoop
+	--:NoDataModules|
+	--?[*S:spellchip_module_number] -eq 0|NoSpellchipModules
+	--=k|0
+	--:SpellchipLoop|
+	--=k|[$k] + 1
+	--&SpellchipContents|spellchip_module_[$k.Raw]
+	--&SpellchipFirewall|spellchip_module_[$k.Raw]_firewall
+	--+Spellchip Module [$k.Total]:| [*S:[&SpellchipContents]] [b]Firewalled:[/b] [*S:[&SpellchipFirewall]]
+	--?[$k] -lt [*S:data_module_number]|SpellchipLoop
+	--:NoSpellchipModules|
+	--?[*S:countermeasure_number -eq 0|NoCountermeasures
+	--+Alarm:| [*S:alarm] [b]Firewalled:[/b] [*S:alarm_firewall] 
+	--+Fake Shell:| [*S:fakeshell]
+	--+Feedback:| [*S:feedback] [b]Firewalled:[/b] [*S:feedback_firewall] 
+	--+Shock Grid:| [*S:shock_grid] [*S:shock_grid_damage]d6 [b]Firewalled:[/b] [*S:shock_grid_firewall] 
+	--+Wipe:| [*S:wipe_installed] [b]Firewalled:[/b] [*S:wipe_firewall] 
+	--:NoCountermeasures|
+	--^BaseMenu|
+	--X|
+	
+--:Starship|
+	--&ComputerBonus|[*S:ship_computer]
+	--~ComputerBonus|string;replaceall;+;;[&ComputerBonus]
+	--~ComputerBonus|string;split;/;[&ComputerBonus]
+	--@setattr|_charid [*S:character_id] _computer_nodes|[$ComputerBonusCount] _computer_node_bonus|[&ComputerBonus1] _computer_nodes_used|0 _silent
+}}
+	
+	

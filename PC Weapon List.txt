@@ -1,0 +1,41 @@
+!scriptcard {{ 
++++Starfinder+++
+-->SetSpeakingAsSource|
+--#emoteState|hidden
+  --Lsettings|[*S:character_name]
+  --#title|[*S:character_name] Attacks
+  --#whisper|self
+
+  
+  --:FindAttacks|
+  --Rfirst|[*S:character_id];repeating_attack
+  --=MeleeCount|0
+  --=RangedCount|0
+  
+  --:Attacks|
+  --?"[*R:name]" -inc Loaded|Output
+  --?"[*R:engagement_range]" -eq melee|>AddMelee|>AddRanged
+  --Rnext|
+  --^Attacks|
+  
+  --:AddMelee|
+  --&MeleeWeapons|+ [button][*R:name]::!ia _chat#GenericMacro|PCWeaponStrike _CharacterID#@{selected|token_id} _WeaponName#[*R:name] _AttackMode#Single[/button] [button]Full Attack::!ia _chat#GenericMacro|PCWeaponStrike _CharacterID#@{selected|token_id} _WeaponName#[*R:name] _AttackMode#Full[/button][br][br]
+  --=MeleeCount|[$MeleeCount] + 1
+  --<|  
+  
+  --:AddRanged|
+  --&RangedWeapons|+ [button][*R:name]::!ia _chat#GenericMacro|PCWeaponStrike _CharacterID#@{selected|token_id} _WeaponName#[*R:name] _AttackMode#Single[/button] [button]Full Attack::!ia _chat#GenericMacro|PCWeaponStrike _CharacterID#@{selected|token_id} _WeaponName#[*R:name] _AttackMode#Full[/button][br][br]
+  --=RangedCount|[$RangedCount] + 1
+  --<|  
+
+  --:Output|
+  --?[$MeleeCount] -eq 0|RangedOutput
+  --+|[c][b]Melee Weapons[/b][/c]
+  --+|[c][br][&MeleeWeapons][/c]
+  --:RangedOutput|
+  --?[$RangedCount] -eq 0|OutputDone
+  --+|[c][b]Ranged Weapons[/b][/c]
+  --+|[c][br][&RangedWeapons][/c]
+  --:OutputDone|
+  --X|
+}}
